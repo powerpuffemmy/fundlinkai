@@ -14,7 +14,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
 
-  login: async (email: string, password = 'demo123') => {
+  login: async (email: string, _password = 'demo123') => {
     set({ isLoading: true })
     try {
       // Buscar el usuario directamente en la tabla users por email

@@ -201,8 +201,7 @@ export const BancoAprobaciones: React.FC = () => {
                       {oferta.subasta?.tipo || '—'}
                     </td>
                     <td className="p-3 font-semibold">
-                      {oferta.subasta ? formatMoney(oferta.subasta.monto, oferta.subasta.moneda) : '—'}
-                    </td>
+                      {oferta.subasta ? formatMoney(oferta.subasta.monto, oferta.subasta.moneda as 'USD' | 'GTQ') : '—'}                    </td>
                     <td className="p-3 text-sm">
                       {oferta.subasta?.plazo || '—'} días
                     </td>
