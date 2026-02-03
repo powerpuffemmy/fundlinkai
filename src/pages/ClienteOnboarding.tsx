@@ -38,7 +38,23 @@ export const ClienteOnboarding: React.FC = () => {
 
   useEffect(() => {
     cargarBancos()
+    verificarProgreso()
   }, [])
+
+  const verificarProgreso = async () => {
+    if (!user) return
+
+    // Verificar si ya tiene bancos configurados
+    const { data: limites } = await supabase
+      .from('cliente_banco_limites')
+      .select('*')
+      .eq('cliente_id', user.id)
+
+    if (limites && limites.length > 0) {
+      // Ya configuró bancos, ir al paso 3
+      setPaso(3)
+    }
+  }
 
   const cargarBancos = async () => {
     const bancos = await obtenerTodosBancos()
@@ -108,8 +124,21 @@ export const ClienteOnboarding: React.FC = () => {
     try {
       setLoading(true)
 
-      // Crear límites para cada banco seleccionado
+      // Verificar límites existentes
+      const { data: limitesExistentes } = await supabase
+        .from('cliente_banco_limites')
+        .select('banco_id')
+        .eq('cliente_id', user!.id)
+
+      const bancosExistentes = new Set(limitesExistentes?.map(l => l.banco_id) || [])
+
+      // Crear límites solo para bancos nuevos
       for (const bancoId of seleccionados) {
+        if (bancosExistentes.has(bancoId)) {
+          console.log(`Banco ${bancoId} ya tiene límite, saltando...`)
+          continue
+        }
+
         const resultado = await crearLimite({
           cliente_id: user!.id,
           banco_id: bancoId,
@@ -380,7 +409,7 @@ export const ClienteOnboarding: React.FC = () => {
                     </div>
                     
                     {!docSubido ? (
-                      <label className="cursor-pointer">
+                      <label className="cursor-pointer inline-block">
                         <input
                           type="file"
                           accept=".pdf,.jpg,.jpeg,.png"
@@ -388,9 +417,13 @@ export const ClienteOnboarding: React.FC = () => {
                           className="hidden"
                           disabled={subiendoDoc}
                         />
-                        <Button variant="small" disabled={subiendoDoc}>
-                          {subiendoDoc ? 'Subiendo...' : 'Subir'}
-                        </Button>
+                        <span className={`inline-block px-3 py-2 text-xs rounded border transition-colors ${
+                          subiendoDoc 
+                            ? 'bg-gray-900/20 border-gray-900/50 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-900/20 border-blue-900/50 text-blue-200 hover:bg-blue-900/30 cursor-pointer'
+                        }`}>
+                          {subiendoDoc ? 'Subiendo...' : 'Subir Archivo'}
+                        </span>
                       </label>
                     ) : (
                       <Button

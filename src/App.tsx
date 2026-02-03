@@ -36,7 +36,7 @@ function App() {
 
   if (!initialized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
         <div className="text-center">
           <div className="text-6xl mb-4">⏳</div>
           <p className="text-white text-lg">Cargando...</p>

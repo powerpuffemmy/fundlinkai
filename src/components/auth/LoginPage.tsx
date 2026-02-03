@@ -31,20 +31,20 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] p-4">
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black text-white mb-2">
             FUNDLINK<span className="text-[var(--primary)]">AI</span>
           </h1>
-          <p className="text-gray-400 text-sm">
+          <p className="text-[var(--muted)] text-sm">
             Plataforma de Subastas Financieras
           </p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-8 shadow-2xl">
+        <div className="bg-[var(--card)] backdrop-blur-lg rounded-2xl border border-[var(--line)] p-8 shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-6">Iniciar Sesión</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -101,7 +101,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-gray-400 text-xs">
+        <div className="text-center mt-6 text-[var(--muted)] text-xs">
           <p>© 2026 FUNDLinkAI. Todos los derechos reservados.</p>
         </div>
       </div>

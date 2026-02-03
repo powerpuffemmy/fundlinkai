@@ -16,9 +16,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+    <div className="min-h-screen bg-[var(--bg)]">
       {/* Header */}
-      <header className="bg-black/20 backdrop-blur-lg border-b border-white/10">
+      <header className="bg-[var(--card)] backdrop-blur-lg border-b border-[var(--line)]">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             {/* Logo */}
@@ -36,7 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <div className="text-sm font-semibold text-white">
                       {user.nombre}
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-[var(--muted)]">
                       {user.entidad}
                     </div>
                   </div>
