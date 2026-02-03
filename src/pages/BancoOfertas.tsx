@@ -91,8 +91,8 @@ export const BancoOfertas: React.FC = () => {
                       <div className="text-xs text-[var(--muted)]">{oferta.cliente?.nombre}</div>
                     </td>
                     <td className="p-3 font-semibold">
-                      {oferta.subasta?.monto 
-                        ? formatMoney(oferta.subasta.monto, oferta.subasta.moneda) 
+                      {oferta.subasta?.monto && oferta.subasta?.moneda
+                        ? formatMoney(oferta.subasta.monto, oferta.subasta.moneda as 'USD' | 'GTQ') 
                         : '—'}
                     </td>
                     <td className="p-3 text-sm">
