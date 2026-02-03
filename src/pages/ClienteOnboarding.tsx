@@ -110,18 +110,20 @@ export const ClienteOnboarding: React.FC = () => {
 
       // Crear límites para cada banco seleccionado
       for (const bancoId of seleccionados) {
-        await crearLimite({
+        const resultado = await crearLimite({
           cliente_id: user!.id,
           banco_id: bancoId,
           limite_monto: bancosSeleccionados[bancoId],
           activo: true
         })
+        
+        console.log('Límite creado:', resultado)
       }
 
       setPaso(3)
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Error al configurar bancos')
+    } catch (error: any) {
+      console.error('Error completo:', error)
+      alert(`Error al configurar bancos: ${error.message || 'Error desconocido'}`)
     } finally {
       setLoading(false)
     }
