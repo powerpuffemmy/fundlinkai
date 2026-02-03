@@ -140,7 +140,7 @@ export const LogoUploader: React.FC<LogoUploaderProps> = ({ currentLogoUrl, onLo
 
           {currentLogoUrl && (
             <Button 
-              variant="danger" 
+              variant="secondary"
               onClick={handleDelete}
               disabled={uploading}
             >
