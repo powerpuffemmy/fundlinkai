@@ -7,7 +7,11 @@ import { useSubastas } from '@/hooks/useSubastas'
 import { useAuthStore } from '@/store/authStore'
 import type { TipoSubasta, Moneda } from '@/types/database'
 
-export const NuevaSubasta: React.FC = () => {
+interface NuevaSubastaProps {
+  onSubastaCreada?: () => void  // ⭐ NUEVO: Callback para redirección
+}
+
+export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) => {
   const { user } = useAuthStore()
   const { crearSubasta } = useSubastas()
   
@@ -18,7 +22,6 @@ export const NuevaSubasta: React.FC = () => {
   const [duracion, setDuracion] = useState('30')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
 
   const tiposSubasta = [
     { value: 'abierta', label: 'Mercado Abierto' },
@@ -51,7 +54,6 @@ export const NuevaSubasta: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setSuccess(false)
 
     if (!user) {
       setError('Usuario no autenticado')
@@ -77,15 +79,14 @@ export const NuevaSubasta: React.FC = () => {
         expires_at: expiresAt.toISOString()
       })
 
-      setSuccess(true)
+      // ⭐ NUEVO: Mostrar mensaje y redireccionar después de 1.5 segundos
+      alert('¡Subasta creada exitosamente! Los bancos ya pueden ofertar.')
       
-      // Reset form
       setTimeout(() => {
-        setMonto('10000000')
-        setPlazo('30')
-        setDuracion('30')
-        setSuccess(false)
-      }, 3000)
+        if (onSubastaCreada) {
+          onSubastaCreada() // Callback para cambiar de página
+        }
+      }, 1500)
 
     } catch (err) {
       console.error(err)
@@ -97,7 +98,12 @@ export const NuevaSubasta: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Nueva Subasta</h2>
+      <div>
+        <h2 className="text-2xl font-bold">Nueva Subasta</h2>
+        <p className="text-[var(--muted)] mt-1">
+          Crea una solicitud de colocación y recibe ofertas de múltiples bancos
+        </p>
+      </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
@@ -148,12 +154,6 @@ export const NuevaSubasta: React.FC = () => {
               </div>
             )}
 
-            {success && (
-              <div className="text-[var(--good)] text-sm bg-green-900/20 border border-green-900/50 rounded p-3">
-                ¡Subasta creada exitosamente! Los bancos ya pueden ofertar.
-              </div>
-            )}
-
             <Button 
               type="submit" 
               variant="primary" 
@@ -197,8 +197,14 @@ export const NuevaSubasta: React.FC = () => {
           </div>
 
           <div className="mt-6 p-3 bg-blue-900/20 border border-blue-900/50 rounded">
-            <p className="text-xs text-[var(--muted)]">
-              Una vez creada, la subasta estará disponible para que los bancos envíen sus ofertas durante el tiempo especificado.
+            <p className="text-xs text-blue-200">
+              💡 <strong>Tip:</strong> Una vez creada, la subasta estará visible para todos los bancos durante el tiempo especificado. Recibirás ofertas en tiempo real.
+            </p>
+          </div>
+
+          <div className="mt-4 p-3 bg-green-900/20 border border-green-900/50 rounded">
+            <p className="text-xs text-green-200">
+              ✓ Después de crear la subasta serás redirigido a "Mis Subastas" para ver las ofertas que lleguen.
             </p>
           </div>
         </Card>

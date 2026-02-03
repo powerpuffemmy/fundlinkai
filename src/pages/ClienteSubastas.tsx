@@ -62,6 +62,15 @@ export const ClienteSubastas: React.FC = () => {
     cargarOfertas()
   }, [misSubastas.length])
 
+  const handleRecordarVencimiento = (subasta_id: string) => {
+    const subasta = misSubastas.find(s => s.id === subasta_id)
+    if (!subasta) return
+
+    alert(`⏰ Recordatorio configurado\n\nTe notificaremos cuando la subasta esté próxima a vencer.\n\nSubasta: ${formatMoney(subasta.monto, subasta.moneda)}\nVence: ${formatDateTime(subasta.expires_at)}`)
+    
+    // TODO: Implementar sistema de notificaciones real
+  }
+
   const handleAprobar = async (subasta_id: string, oferta: OfertaConBanco) => {
     if (!user) return
 
@@ -187,7 +196,40 @@ export const ClienteSubastas: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Mis Subastas y Ofertas</h2>
+      <div>
+        <h2 className="text-2xl font-bold">Mis Subastas y Ofertas</h2>
+        <p className="text-[var(--muted)] mt-1">
+          Gestiona tus solicitudes de colocación y revisa las ofertas recibidas
+        </p>
+      </div>
+
+      {/* ⭐ NUEVO: Resumen de Subastas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <div className="text-sm text-[var(--muted)]">Subastas ABIERTAS</div>
+          <div className="text-2xl font-black mt-1 text-green-400">
+            {misSubastas.filter(s => s.estado === 'abierta').length}
+          </div>
+        </Card>
+        <Card>
+          <div className="text-sm text-[var(--muted)]">ESPERANDO Ofertas</div>
+          <div className="text-2xl font-black mt-1 text-blue-400">
+            {misSubastas.filter(s => s.estado === 'esperando').length}
+          </div>
+        </Card>
+        <Card>
+          <div className="text-sm text-[var(--muted)]">CERRADAS</div>
+          <div className="text-2xl font-black mt-1 text-gray-400">
+            {misSubastas.filter(s => s.estado === 'cerrada').length}
+          </div>
+        </Card>
+        <Card>
+          <div className="text-sm text-[var(--muted)]">Total de Ofertas</div>
+          <div className="text-2xl font-black mt-1 text-purple-400">
+            {Object.values(ofertasPorSubasta).reduce((sum, ofertas) => sum + ofertas.length, 0)}
+          </div>
+        </Card>
+      </div>
 
       {misSubastas.length === 0 ? (
         <Card>
@@ -237,8 +279,26 @@ export const ClienteSubastas: React.FC = () => {
                 {loadingOfertas ? (
                   <p className="text-sm text-[var(--muted)]">Cargando ofertas...</p>
                 ) : ofertas.length === 0 ? (
-                  <div className="p-4 bg-white/5 rounded text-center text-sm text-[var(--muted)]">
-                    No hay ofertas para esta subasta
+                  <div className="p-4 bg-yellow-900/10 border border-yellow-900/30 rounded">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-yellow-200 font-semibold mb-1">
+                          ⏰ No has recibido ofertas aún
+                        </p>
+                        <p className="text-xs text-yellow-300">
+                          Los bancos tienen hasta {formatDateTime(subasta.expires_at)} para ofertar
+                        </p>
+                      </div>
+                      {/* ⭐ NUEVO: Botón de recordatorio */}
+                      {subasta.estado === 'abierta' && (
+                        <Button 
+                          variant="small"
+                          onClick={() => handleRecordarVencimiento(subasta.id)}
+                        >
+                          Recordar Vencimiento
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div>

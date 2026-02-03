@@ -146,7 +146,7 @@ function App() {
     if (user.role === 'cliente') {
       switch (currentPage) {
         case 'nueva-subasta':
-          return <NuevaSubasta />
+          return <NuevaSubasta onSubastaCreada={() => setCurrentPage('subastas')} />
         case 'subastas':
           return <ClienteSubastas />
         case 'compromisos':
