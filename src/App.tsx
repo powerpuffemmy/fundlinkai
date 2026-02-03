@@ -38,7 +38,7 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
         <div className="text-center">
-          <div className="text-6xl mb-4">⏳</div>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
           <p className="text-white text-lg">Cargando...</p>
         </div>
       </div>
@@ -63,7 +63,7 @@ function App() {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto text-center py-12">
-          <div className="text-6xl mb-4">⏳</div>
+          <div className="animate-pulse text-6xl mb-4">⏱️</div>
           <h2 className="text-2xl font-bold mb-4">Cuenta en Revisión</h2>
           <p className="text-[var(--muted)] mb-6">
             Tu configuración está siendo revisada por nuestro equipo.
