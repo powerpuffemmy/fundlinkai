@@ -3,11 +3,29 @@ import type { Compromiso } from '@/types/database'
 interface CompromisoConDetalles extends Compromiso {
   banco_nombre?: string
   banco_entidad?: string
+  banco_logo_url?: string  // ⭐ NUEVO: Logo del banco
   cliente_nombre?: string
   cliente_entidad?: string
 }
 
 export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
+  // Calcular intereses y monto al cierre
+  const intereses = (compromiso.monto * compromiso.tasa / 100 * compromiso.plazo) / 360
+  const montoAlCierre = compromiso.monto + intereses
+
+  // Fecha y hora de emisión
+  const ahora = new Date()
+  const fechaEmision = ahora.toLocaleDateString('es-ES', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+  const horaEmision = ahora.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+
   const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -23,10 +41,36 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
       color: #333;
     }
     .header {
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 30px;
       padding-bottom: 20px;
       border-bottom: 3px solid #4A90E2;
+    }
+    .header-left {
+      flex: 1;
+    }
+    .header-right {
+      flex: 0 0 auto;
+      text-align: right;
+    }
+    .banco-logo {
+      max-width: 150px;
+      max-height: 80px;
+      object-fit: contain;
+    }
+    .logo-placeholder {
+      width: 150px;
+      height: 80px;
+      border: 2px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 12px;
+      text-align: center;
+      padding: 10px;
     }
     h1 {
       color: #4A90E2;
@@ -37,6 +81,11 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
       font-size: 18px;
       color: #666;
       font-weight: bold;
+    }
+    .fecha-emision {
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
     }
     .info-box {
       background: #f5f5f5;
@@ -67,6 +116,13 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
       margin-bottom: 10px;
       padding-bottom: 5px;
       border-bottom: 2px solid #4A90E2;
+    }
+    .highlight-amount {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+      border-left: 4px solid #4A90E2;
     }
     .terms {
       background: #fffbf0;
@@ -112,16 +168,22 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
   <div class="watermark">FUNDLinkAI</div>
 
   <div class="header">
-    <h1>CONTRATO DE COLOCACIÓN</h1>
-    <div class="op-id">${compromiso.op_id}</div>
+    <div class="header-left">
+      <h1>CONTRATO DE COLOCACIÓN</h1>
+      <div class="op-id">${compromiso.op_id}</div>
+      <div class="fecha-emision">
+        <strong>Fecha de emisión:</strong> ${fechaEmision} - ${horaEmision} hrs
+      </div>
+    </div>
+    <div class="header-right">
+      ${compromiso.banco_logo_url ? 
+        `<img src="${compromiso.banco_logo_url}" alt="Logo ${compromiso.banco_entidad}" class="banco-logo">` :
+        `<div class="logo-placeholder">Logo del<br>Banco</div>`
+      }
+    </div>
   </div>
 
   <div class="info-box">
-    <p><strong>Fecha de emisión:</strong> ${new Date().toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    })}</p>
     <p><strong>Estado:</strong> ${compromiso.estado.toUpperCase()}</p>
   </div>
 
@@ -148,19 +210,45 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
 
   <div class="section">
     <div class="section-title">CONDICIONES FINANCIERAS</div>
+    
+    <div class="highlight-amount">
+      <table style="border: none; margin: 0;">
+        <tr>
+          <td style="border: none; font-weight: bold; width: 50%;">Monto Principal:</td>
+          <td style="border: none; font-size: 20px; font-weight: bold; color: #4A90E2; text-align: right;">
+            ${new Intl.NumberFormat('es-ES', {
+              style: 'currency',
+              currency: compromiso.moneda
+            }).format(compromiso.monto)}
+          </td>
+        </tr>
+        <tr>
+          <td style="border: none; font-weight: bold;">Intereses Estimados:</td>
+          <td style="border: none; font-size: 16px; color: #10b981; text-align: right;">
+            ${new Intl.NumberFormat('es-ES', {
+              style: 'currency',
+              currency: compromiso.moneda
+            }).format(intereses)}
+          </td>
+        </tr>
+        <tr>
+          <td style="border: none; padding-top: 10px; border-top: 2px solid #4A90E2; font-weight: bold; font-size: 18px;">
+            Monto al Cierre:
+          </td>
+          <td style="border: none; padding-top: 10px; border-top: 2px solid #4A90E2; font-size: 22px; font-weight: bold; color: #059669; text-align: right;">
+            ${new Intl.NumberFormat('es-ES', {
+              style: 'currency',
+              currency: compromiso.moneda
+            }).format(montoAlCierre)}
+          </td>
+        </tr>
+      </table>
+    </div>
+
     <table>
       <tr>
         <th>Concepto</th>
         <th>Detalle</th>
-      </tr>
-      <tr>
-        <td><strong>Monto Principal</strong></td>
-        <td style="font-size: 18px; font-weight: bold; color: #4A90E2;">
-          ${new Intl.NumberFormat('es-ES', {
-            style: 'currency',
-            currency: compromiso.moneda
-          }).format(compromiso.monto)}
-        </td>
       </tr>
       <tr>
         <td><strong>Moneda</strong></td>
@@ -181,13 +269,6 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
       <tr>
         <td><strong>Fecha de Vencimiento</strong></td>
         <td>${new Date(compromiso.fecha_vencimiento).toLocaleDateString('es-ES')}</td>
-      </tr>
-      <tr>
-        <td><strong>Intereses Estimados</strong></td>
-        <td>${new Intl.NumberFormat('es-ES', {
-          style: 'currency',
-          currency: compromiso.moneda
-        }).format((compromiso.monto * compromiso.tasa / 100 * compromiso.plazo) / 360)}</td>
       </tr>
     </table>
   </div>

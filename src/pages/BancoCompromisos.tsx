@@ -6,12 +6,12 @@ import { useAuthStore } from '@/store/authStore'
 import { formatMoney, formatDate, daysBetween } from '@/lib/utils'
 import { generarPDFCompromiso } from '@/lib/pdfGenerator'
 
-export const ClienteCompromisos: React.FC = () => {
+export const BancoCompromisos: React.FC = () => {
   const { user } = useAuthStore()
   const { compromisos, loading } = useCompromisos()
 
-  // Filtrar solo los compromisos del cliente actual
-  const misCompromisos = compromisos.filter(c => c.cliente_id === user?.id)
+  // Filtrar solo los compromisos del banco actual
+  const misCompromisos = compromisos.filter(c => c.banco_id === user?.id)
 
   const getDiasRestantes = (fechaVencimiento: string) => {
     const hoy = new Date().toISOString().split('T')[0]
@@ -31,7 +31,7 @@ export const ClienteCompromisos: React.FC = () => {
       ...comp,
       banco_nombre: comp.banco?.nombre,
       banco_entidad: comp.banco?.entidad,
-      banco_logo_url: comp.banco?.logo_url,  // ⭐ NUEVO: Logo del banco
+      banco_logo_url: comp.banco?.logo_url,  // Logo del banco
       cliente_nombre: comp.cliente?.nombre,
       cliente_entidad: comp.cliente?.entidad,
     }
@@ -52,7 +52,12 @@ export const ClienteCompromisos: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Mis Compromisos</h2>
+      <div>
+        <h2 className="text-2xl font-bold">Mis Compromisos</h2>
+        <p className="text-[var(--muted)] mt-1">
+          Compromisos donde {user?.entidad} es el banco
+        </p>
+      </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <Card>
@@ -66,7 +71,7 @@ export const ClienteCompromisos: React.FC = () => {
           </div>
         </Card>
         <Card>
-          <div className="text-sm text-[var(--muted)]">Monto Total</div>
+          <div className="text-sm text-[var(--muted)]">Monto Total Colocado</div>
           <div className="text-2xl font-black mt-1">
             {formatMoney(
               misCompromisos
@@ -91,7 +96,7 @@ export const ClienteCompromisos: React.FC = () => {
               <thead>
                 <tr className="border-b border-[var(--line)]">
                   <th className="text-left p-3 text-sm text-[var(--muted)]">OP-ID</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Banco</th>
+                  <th className="text-left p-3 text-sm text-[var(--muted)]">Cliente</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Monto</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Tasa</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Inicio</th>
@@ -112,8 +117,8 @@ export const ClienteCompromisos: React.FC = () => {
                         <span className="font-mono text-sm font-semibold">{comp.op_id}</span>
                       </td>
                       <td className="p-3">
-                        <div className="font-semibold text-sm">{comp.banco?.entidad}</div>
-                        <div className="text-xs text-[var(--muted)]">{comp.banco?.nombre}</div>
+                        <div className="font-semibold text-sm">{comp.cliente?.entidad}</div>
+                        <div className="text-xs text-[var(--muted)]">{comp.cliente?.nombre}</div>
                       </td>
                       <td className="p-3 font-semibold">
                         {formatMoney(comp.monto, comp.moneda)}

@@ -19,6 +19,7 @@ export interface User {
   nombre: string
   entidad: string
   activo: boolean
+  logo_url?: string  // ⭐ NUEVO: URL del logo de la empresa (principalmente para bancos)
   created_at: string
   updated_at: string
 }

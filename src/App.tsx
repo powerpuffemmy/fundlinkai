@@ -11,13 +11,15 @@ import { ClienteCompromisos } from './pages/ClienteCompromisos'
 import { BancoSolicitudes } from './pages/BancoSolicitudes'
 import { BancoOfertas } from './pages/BancoOfertas'
 import { BancoAprobaciones } from './pages/BancoAprobaciones'
+import { BancoCompromisos } from './pages/BancoCompromisos'
+import { BancoConfiguracion } from './pages/BancoConfiguracion'
 import { WebAdminUsuarios } from './pages/WebAdminUsuarios'
 import { WebAdminSistema } from './pages/WebAdminSistema'
 import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { Button } from './components/common/Button'
 
 type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'compromisos'
-type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones'
+type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'sistema' | 'auditoria'
 type Page = ClientePage | BancoPage | WebAdminPage
 
@@ -63,7 +65,7 @@ function App() {
 
     if (user.role.startsWith('banco')) {
       return (
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           <Button 
             variant={currentPage === 'dashboard' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('dashboard')}
@@ -90,6 +92,18 @@ function App() {
               Aprobaciones
             </Button>
           )}
+          <Button 
+            variant={currentPage === 'compromisos' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('compromisos')}
+          >
+            Compromisos
+          </Button>
+          <Button 
+            variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('configuracion')}
+          >
+            Configuración
+          </Button>
         </div>
       )
     }
@@ -150,6 +164,10 @@ function App() {
           return <BancoOfertas />
         case 'aprobaciones':
           return <BancoAprobaciones />
+        case 'compromisos':
+          return <BancoCompromisos />
+        case 'configuracion':
+          return <BancoConfiguracion />
         default:
           return <BancoDashboard />
       }

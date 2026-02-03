@@ -3,17 +3,36 @@ import { supabase } from '@/lib/supabase'
 import type { Compromiso } from '@/types/database'
 import { useAuthStore } from '@/store/authStore'
 
+// Extender el tipo Compromiso para incluir los datos relacionados
+interface CompromisoConDetalles extends Compromiso {
+  banco?: {
+    nombre: string
+    entidad: string
+    logo_url?: string
+  }
+  cliente?: {
+    nombre: string
+    entidad: string
+  }
+}
+
 export const useCompromisos = () => {
-  const [compromisos, setCompromisos] = useState<Compromiso[]>([])
+  const [compromisos, setCompromisos] = useState<CompromisoConDetalles[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuthStore()
 
   const fetchCompromisos = async () => {
     try {
       setLoading(true)
+      
+      // ⭐ ACTUALIZADO: Ahora incluye datos del banco (con logo) y cliente
       const { data, error } = await supabase
         .from('compromisos')
-        .select('*')
+        .select(`
+          *,
+          banco:users!banco_id(nombre, entidad, logo_url),
+          cliente:users!cliente_id(nombre, entidad)
+        `)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -32,7 +51,11 @@ export const useCompromisos = () => {
       const { data, error } = await supabase
         .from('compromisos')
         .insert([compromiso])
-        .select()
+        .select(`
+          *,
+          banco:users!banco_id(nombre, entidad, logo_url),
+          cliente:users!cliente_id(nombre, entidad)
+        `)
         .single()
 
       if (error) throw error
