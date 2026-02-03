@@ -85,19 +85,6 @@ export const LoginPage: React.FC = () => {
               {loading ? 'Iniciando sesión...' : 'Entrar'}
             </Button>
           </form>
-
-          {/* Info de desarrollo */}
-          <div className="mt-6 p-3 bg-blue-900/20 border border-blue-900/50 rounded-lg">
-            <p className="text-xs text-blue-200 mb-2">
-              <strong>Usuarios de prueba:</strong>
-            </p>
-            <div className="text-xs text-blue-300 space-y-1">
-              <div>• Cliente: ana.garcia@corptech.com</div>
-              <div>• Banco: carlos.mendez@bancogt.com</div>
-              <div>• WebAdmin: admin@fundlinkai.com</div>
-              <div className="mt-2 text-blue-400">Contraseña: password123</div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
