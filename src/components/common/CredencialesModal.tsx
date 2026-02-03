@@ -27,9 +27,13 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
           ✅ Usuario creado exitosamente
         </h3>
 
-        <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-900/50 rounded-lg">
+        <div className="mb-6 p-4 bg-green-900/20 border border-green-900/50 rounded-lg">
+          <p className="text-sm text-green-200 mb-3">
+            <strong>✅ CUENTA CREADA:</strong> La cuenta de autenticación fue creada automáticamente.
+          </p>
+          
           <p className="text-sm text-yellow-200 mb-3">
-            <strong>⚠️ IMPORTANTE:</strong> Guarda estas credenciales y envíaselas al usuario.
+            <strong>📧 Envía estas credenciales al usuario:</strong>
           </p>
           
           <div className="space-y-2">

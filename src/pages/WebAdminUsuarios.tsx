@@ -239,23 +239,36 @@ export const WebAdminUsuarios: React.FC = () => {
         // 2. Generar contraseña temporal
         const passwordTemporal = `Temp${Math.random().toString(36).slice(-8)}!`
 
-        // 3. Crear cuenta en Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: email,
-          password: passwordTemporal,
-          email_confirm: true,
-          user_metadata: {
-            nombre: nombre,
-            entidad: entidad,
-            role: role
-          }
-        })
+        // 3. Crear cuenta en Supabase Auth usando Edge Function
+        try {
+          const { data: session } = await supabase.auth.getSession()
 
-        if (authError) {
-          console.error('Error creando cuenta Auth:', authError)
-          // No lanzar error, solo avisar
-          alert(`⚠️ Usuario creado en la base de datos, pero hubo un error al crear la cuenta de autenticación.\n\nDeberás crear la cuenta manualmente en Authentication → Users.\n\nError: ${authError.message}`)
-        } else {
+          const response = await fetch(
+            'https://ewcvkvnnixrxmiruzmie.supabase.co/functions/v1/create-auth-user',
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session?.session?.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: email,
+                password: passwordTemporal,
+                nombre: nombre,
+                entidad: entidad,
+                role: role
+              })
+            }
+          )
+
+          const result = await response.json()
+
+          if (!result.success) {
+            throw new Error(result.error || 'Error creando cuenta Auth')
+          }
+
+          console.log('Cuenta Auth creada exitosamente:', result.user)
+
           // Mostrar credenciales en modal
           setCredencialesNuevas({
             email: email,
@@ -263,13 +276,17 @@ export const WebAdminUsuarios: React.FC = () => {
             role: role
           })
           setMostrarCredenciales(true)
+
+        } catch (authError: any) {
+          console.error('Error creando cuenta Auth:', authError)
+          alert(`⚠️ Usuario creado en la base de datos, pero hubo un error al crear la cuenta de autenticación.\n\nDeberás crear la cuenta manualmente en Authentication → Users.\n\nError: ${authError.message}`)
         }
 
         await supabase.rpc('log_auditoria', {
           p_user_id: currentUser?.id,
           p_accion: 'Crear Usuario',
-          p_detalle: `Usuario ${email} creado con cuenta Auth`,
-          p_metadata: { email, auth_created: !authError }
+          p_detalle: `Usuario ${email} creado`,
+          p_metadata: { email }
         })
       }
 
