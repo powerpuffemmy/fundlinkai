@@ -208,15 +208,24 @@ export const WebAdminUsuarios: React.FC = () => {
         alert('Usuario actualizado exitosamente')
       } else {
         // Crear nuevo
+        const nuevoUsuario: any = {
+          email,
+          nombre,
+          entidad,
+          role,
+          activo
+        }
+
+        // Si es cliente, forzar onboarding
+        if (role === 'cliente') {
+          nuevoUsuario.activo = false
+          nuevoUsuario.onboarding_completado = false
+          nuevoUsuario.aprobado_por_admin = false
+        }
+
         const { error } = await supabase
           .from('users')
-          .insert([{
-            email,
-            nombre,
-            entidad,
-            role,
-            activo
-          }])
+          .insert([nuevoUsuario])
 
         if (error) throw error
 
@@ -227,7 +236,10 @@ export const WebAdminUsuarios: React.FC = () => {
           p_metadata: { email }
         })
 
-        alert('Usuario creado exitosamente')
+        alert(role === 'cliente' 
+          ? 'Cliente creado. Deberá completar su configuración al hacer login.'
+          : 'Usuario creado exitosamente'
+        )
       }
 
       limpiarFormulario()

@@ -9,6 +9,7 @@ import { NuevaSubasta } from './pages/NuevaSubasta'
 import { ClienteSubastas } from './pages/ClienteSubastas'
 import { ClienteCompromisos } from './pages/ClienteCompromisos'
 import { ClienteConfiguracion } from './pages/ClienteConfiguracion'
+import { ClienteOnboarding } from './pages/ClienteOnboarding'
 import { BancoSolicitudes } from './pages/BancoSolicitudes'
 import { BancoOfertas } from './pages/BancoOfertas'
 import { BancoAprobaciones } from './pages/BancoAprobaciones'
@@ -17,11 +18,12 @@ import { BancoConfiguracion } from './pages/BancoConfiguracion'
 import { WebAdminUsuarios } from './pages/WebAdminUsuarios'
 import { WebAdminSistema } from './pages/WebAdminSistema'
 import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
+import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { Button } from './components/common/Button'
 
 type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'compromisos' | 'configuracion'
 type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion'
-type WebAdminPage = 'dashboard' | 'usuarios' | 'sistema' | 'auditoria'
+type WebAdminPage = 'dashboard' | 'usuarios' | 'sistema' | 'auditoria' | 'aprobaciones'
 type Page = ClientePage | BancoPage | WebAdminPage
 
 function App() {
@@ -30,6 +32,34 @@ function App() {
 
   if (!user) {
     return <LoginPage />
+  }
+
+  // Si es cliente y no ha completado onboarding, mostrar pantalla de configuración
+  if (user.role === 'cliente' && !user.onboarding_completado) {
+    return (
+      <Layout user={user}>
+        <ClienteOnboarding />
+      </Layout>
+    )
+  }
+
+  // Si es cliente aprobado pero no activo, mostrar mensaje de espera
+  if (user.role === 'cliente' && user.onboarding_completado && !user.aprobado_por_admin) {
+    return (
+      <Layout user={user}>
+        <div className="max-w-2xl mx-auto text-center py-12">
+          <div className="text-6xl mb-4">⏳</div>
+          <h2 className="text-2xl font-bold mb-4">Cuenta en Revisión</h2>
+          <p className="text-[var(--muted)] mb-6">
+            Tu configuración está siendo revisada por nuestro equipo.
+            Te notificaremos cuando tu cuenta esté aprobada y puedas empezar a operar.
+          </p>
+          <p className="text-sm text-[var(--muted)]">
+            Si tienes preguntas, contacta a soporte.
+          </p>
+        </div>
+      </Layout>
+    )
   }
 
   const getNavigation = () => {
@@ -131,6 +161,12 @@ function App() {
             Usuarios
           </Button>
           <Button 
+            variant={currentPage === 'aprobaciones' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('aprobaciones')}
+          >
+            Aprobaciones
+          </Button>
+          <Button 
             variant={currentPage === 'sistema' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('sistema')}
           >
@@ -186,6 +222,8 @@ function App() {
       switch (currentPage) {
         case 'usuarios':
           return <WebAdminUsuarios />
+        case 'aprobaciones':
+          return <WebAdminAprobaciones />
         case 'sistema':
           return <WebAdminSistema />
         case 'auditoria':

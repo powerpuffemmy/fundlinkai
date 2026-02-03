@@ -19,7 +19,13 @@ export interface User {
   nombre: string
   entidad: string
   activo: boolean
-  logo_url?: string  // ⭐ NUEVO: URL del logo de la empresa (principalmente para bancos)
+  logo_url?: string  // ⭐ URL del logo de la empresa (principalmente para bancos)
+  onboarding_completado?: boolean  // ⭐ NUEVO: Si el cliente completó su configuración inicial
+  aprobado_por_admin?: boolean  // ⭐ NUEVO: Si el webadmin aprobó al cliente
+  fecha_aprobacion?: string  // ⭐ NUEVO: Cuándo fue aprobado
+  aprobado_por?: string  // ⭐ NUEVO: ID del webadmin que aprobó
+  telefono?: string  // ⭐ NUEVO: Teléfono de contacto
+  notas_aprobacion?: string  // ⭐ NUEVO: Notas del webadmin
   created_at: string
   updated_at: string
 }
@@ -126,4 +132,23 @@ export interface SubastaBanco {
   subasta_id: string
   banco_id: string
   invitado_en: string
+}
+
+// ⭐ NUEVO: Interface para documentos KYC
+export type TipoDocumentoKYC = 'cedula' | 'rtu' | 'patente' | 'estados_financieros' | 'otro'
+export type EstadoDocumentoKYC = 'pendiente' | 'aprobado' | 'rechazado'
+
+export interface DocumentoKYC {
+  id: string
+  cliente_id: string
+  tipo_documento: TipoDocumentoKYC
+  nombre_archivo: string
+  url_archivo: string
+  descripcion?: string
+  estado: EstadoDocumentoKYC
+  revisado_por?: string
+  fecha_revision?: string
+  notas_revision?: string
+  created_at: string
+  updated_at: string
 }
