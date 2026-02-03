@@ -3,17 +3,30 @@ import { supabase } from '@/lib/supabase'
 import type { Subasta } from '@/types/database'
 import { useAuthStore } from '@/store/authStore'
 
+// Extender el tipo Subasta para incluir datos del cliente
+interface SubastaConCliente extends Subasta {
+  cliente?: {
+    nombre: string
+    entidad: string
+  }
+}
+
 export const useSubastas = () => {
-  const [subastas, setSubastas] = useState<Subasta[]>([])
+  const [subastas, setSubastas] = useState<SubastaConCliente[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuthStore()
 
   const fetchSubastas = async () => {
     try {
       setLoading(true)
+      
+      // ⭐ ACTUALIZADO: Ahora incluye datos del cliente
       const { data, error } = await supabase
         .from('subastas')
-        .select('*')
+        .select(`
+          *,
+          cliente:users!cliente_id(nombre, entidad)
+        `)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -32,7 +45,10 @@ export const useSubastas = () => {
       const { data, error } = await supabase
         .from('subastas')
         .insert([subasta])
-        .select()
+        .select(`
+          *,
+          cliente:users!cliente_id(nombre, entidad)
+        `)
         .single()
 
       if (error) throw error

@@ -11,17 +11,24 @@ import type { Subasta } from '@/types/database'
 export const BancoSolicitudes: React.FC = () => {
   const { user } = useAuthStore()
   const { subastas, loading } = useSubastas()
+  const { ofertas } = useOfertas() // Obtener las ofertas del banco
   const { crearOferta } = useOfertas()
   const [tasas, setTasas] = useState<Record<string, string>>({})
   const [enviando, setEnviando] = useState<Record<string, boolean>>({})
 
-  const subastas_abiertas = subastas.filter(s => s.estado === 'abierta')
+  // Obtener IDs de subastas donde ya ofertó este banco
+  const subastasConOferta = new Set(ofertas.map(o => o.subasta_id))
+
+  // Filtrar subastas abiertas donde NO ha ofertado
+  const subastas_abiertas = subastas.filter(
+    s => s.estado === 'abierta' && !subastasConOferta.has(s.id)
+  )
 
   const handleTasaChange = (subastaId: string, value: string) => {
     setTasas(prev => ({ ...prev, [subastaId]: value }))
   }
 
-  const handleOfertar = async (subasta: Subasta) => {
+  const handleOfertar = async (subasta: any) => {
     if (!user) return
 
     const tasa = parseFloat(tasas[subasta.id] || '0')
@@ -45,7 +52,7 @@ export const BancoSolicitudes: React.FC = () => {
         subasta_id: subasta.id,
         banco_id: user.id,
         tasa: tasa,
-        estado: aprobada_por_admin ? 'enviada' : 'enviada',
+        estado: 'enviada',
         aprobada_por_admin: aprobada_por_admin,
         notas: ''
       })
@@ -79,7 +86,7 @@ export const BancoSolicitudes: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Solicitudes de Colocación</h2>
+        <h2 className="text-2xl font-bold">Solicitudes de Clientes</h2>
         <Card>
           <p className="text-[var(--muted)]">Cargando subastas...</p>
         </Card>
@@ -90,9 +97,14 @@ export const BancoSolicitudes: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Solicitudes de Colocación</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Solicitudes de Clientes</h2>
+          <p className="text-sm text-[var(--muted)] mt-1">
+            Subastas disponibles para ofertar
+          </p>
+        </div>
         <div className="text-sm text-[var(--muted)]">
-          {subastas_abiertas.length} subasta(s) activa(s)
+          {subastas_abiertas.length} solicitud(es) disponible(s)
         </div>
       </div>
 
@@ -115,7 +127,12 @@ export const BancoSolicitudes: React.FC = () => {
       {subastas_abiertas.length === 0 ? (
         <Card>
           <p className="text-[var(--muted)] text-center py-8">
-            No hay subastas activas en este momento.
+            No hay solicitudes disponibles en este momento.
+            {subastasConOferta.size > 0 && (
+              <span className="block mt-2 text-sm">
+                Ya has ofertado en {subastasConOferta.size} subasta(s). Revisa la sección "Mis Ofertas".
+              </span>
+            )}
           </p>
         </Card>
       ) : (
@@ -124,9 +141,21 @@ export const BancoSolicitudes: React.FC = () => {
             <Card key={subasta.id}>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-bold text-lg mb-4">
-                    {subasta.tipo.charAt(0).toUpperCase() + subasta.tipo.slice(1)}
-                  </h3>
+                  <div className="mb-4">
+                    <h3 className="font-bold text-lg">
+                      {subasta.tipo.charAt(0).toUpperCase() + subasta.tipo.slice(1)}
+                    </h3>
+                    {/* ⭐ NUEVO: Mostrar nombre del cliente */}
+                    <div className="mt-2 p-2 bg-blue-900/20 border border-blue-900/50 rounded">
+                      <div className="text-sm">
+                        <span className="text-[var(--muted)]">Cliente:</span>
+                        <span className="ml-2 font-semibold">{subasta.cliente?.entidad}</span>
+                      </div>
+                      <div className="text-xs text-[var(--muted)]">
+                        {subasta.cliente?.nombre}
+                      </div>
+                    </div>
+                  </div>
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">

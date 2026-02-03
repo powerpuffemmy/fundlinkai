@@ -3,24 +3,59 @@ import { supabase } from '@/lib/supabase'
 import type { Oferta } from '@/types/database'
 import { useAuthStore } from '@/store/authStore'
 
+// Extender el tipo Oferta para incluir datos de la subasta y cliente
+interface OfertaConDetalles extends Oferta {
+  subasta?: {
+    monto: number
+    moneda: string
+    plazo: number
+    tipo: string
+    cliente_id: string
+  }
+  cliente?: {
+    nombre: string
+    entidad: string
+  }
+}
+
 export const useOfertas = (subastaId?: string) => {
-  const [ofertas, setOfertas] = useState<Oferta[]>([])
+  const [ofertas, setOfertas] = useState<OfertaConDetalles[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuthStore()
 
   const fetchOfertas = async () => {
     try {
       setLoading(true)
-      let query = supabase.from('ofertas').select('*')
+      
+      // ⭐ ACTUALIZADO: Ahora incluye datos de la subasta y del cliente
+      let query = supabase
+        .from('ofertas')
+        .select(`
+          *,
+          subasta:subastas!subasta_id(monto, moneda, plazo, tipo, cliente_id),
+          cliente:subastas!subasta_id(cliente:users!cliente_id(nombre, entidad))
+        `)
       
       if (subastaId) {
         query = query.eq('subasta_id', subastaId)
       }
 
+      // Si es un banco, solo mostrar sus ofertas
+      if (user?.role.startsWith('banco')) {
+        query = query.eq('banco_id', user.id)
+      }
+
       const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) throw error
-      setOfertas(data || [])
+      
+      // Aplanar la estructura del cliente (viene anidado)
+      const ofertasConDetalles = (data || []).map(oferta => ({
+        ...oferta,
+        cliente: oferta.cliente?.cliente
+      }))
+      
+      setOfertas(ofertasConDetalles)
     } catch (error) {
       console.error('Error fetching ofertas:', error)
     } finally {
