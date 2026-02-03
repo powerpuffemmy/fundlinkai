@@ -1,27 +1,59 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { useSubastas } from '@/hooks/useSubastas'
 import { useOfertas } from '@/hooks/useOfertas'
 import { useAuthStore } from '@/store/authStore'
+import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDateTime } from '@/lib/utils'
 import type { Subasta } from '@/types/database'
 
 export const BancoSolicitudes: React.FC = () => {
   const { user } = useAuthStore()
   const { subastas, loading } = useSubastas()
-  const { ofertas } = useOfertas() // Obtener las ofertas del banco
+  const { ofertas } = useOfertas()
   const { crearOferta } = useOfertas()
   const [tasas, setTasas] = useState<Record<string, string>>({})
   const [enviando, setEnviando] = useState<Record<string, boolean>>({})
+  const [subastasInvitado, setSubastasInvitado] = useState<Set<string>>(new Set())
+  const [loadingInvitaciones, setLoadingInvitaciones] = useState(true)
+
+  // Cargar subastas donde este banco fue invitado
+  useEffect(() => {
+    const cargarInvitaciones = async () => {
+      if (!user) return
+
+      try {
+        setLoadingInvitaciones(true)
+        
+        const { data, error } = await supabase
+          .from('subasta_bancos')
+          .select('subasta_id')
+          .eq('banco_id', user.id)
+
+        if (error) throw error
+
+        const invitaciones = new Set((data || []).map(inv => inv.subasta_id))
+        setSubastasInvitado(invitaciones)
+      } catch (error) {
+        console.error('Error cargando invitaciones:', error)
+      } finally {
+        setLoadingInvitaciones(false)
+      }
+    }
+
+    cargarInvitaciones()
+  }, [user?.id])
 
   // Obtener IDs de subastas donde ya ofertó este banco
   const subastasConOferta = new Set(ofertas.map(o => o.subasta_id))
 
-  // Filtrar subastas abiertas donde NO ha ofertado
-  const subastas_abiertas = subastas.filter(
-    s => s.estado === 'abierta' && !subastasConOferta.has(s.id)
+  // Filtrar subastas: abiertas + invitado + no ha ofertado
+  const subastas_disponibles = subastas.filter(
+    s => s.estado === 'abierta' 
+      && subastasInvitado.has(s.id)
+      && !subastasConOferta.has(s.id)
   )
 
   const handleTasaChange = (subastaId: string, value: string) => {
@@ -83,7 +115,7 @@ export const BancoSolicitudes: React.FC = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
-  if (loading) {
+  if (loading || loadingInvitaciones) {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Solicitudes de Clientes</h2>
@@ -104,14 +136,14 @@ export const BancoSolicitudes: React.FC = () => {
           </p>
         </div>
         <div className="text-sm text-[var(--muted)]">
-          {subastas_abiertas.length} solicitud(es) disponible(s)
+          {subastas_disponibles.length} solicitud(es) disponible(s)
         </div>
       </div>
 
       {user?.role === 'banco_mesa' && (
         <Card className="bg-blue-900/20 border-blue-900/50">
           <p className="text-sm text-blue-200">
-            ℹ️ Como Mesa de Dinero, tus ofertas requieren aprobación del Administrador del banco.
+            Como Mesa de Dinero, tus ofertas requieren aprobación del Administrador del banco.
           </p>
         </Card>
       )}
@@ -119,12 +151,12 @@ export const BancoSolicitudes: React.FC = () => {
       {user?.role === 'banco_auditor' && (
         <Card className="bg-yellow-900/20 border-yellow-900/50">
           <p className="text-sm text-yellow-200">
-            ⚠️ Como Auditor, solo puedes ver las subastas pero no ofertar.
+            Como Auditor, solo puedes ver las subastas pero no ofertar.
           </p>
         </Card>
       )}
 
-      {subastas_abiertas.length === 0 ? (
+      {subastas_disponibles.length === 0 ? (
         <Card>
           <p className="text-[var(--muted)] text-center py-8">
             No hay solicitudes disponibles en este momento.
@@ -137,7 +169,7 @@ export const BancoSolicitudes: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {subastas_abiertas.map(subasta => (
+          {subastas_disponibles.map(subasta => (
             <Card key={subasta.id}>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -145,7 +177,7 @@ export const BancoSolicitudes: React.FC = () => {
                     <h3 className="font-bold text-lg">
                       {subasta.tipo.charAt(0).toUpperCase() + subasta.tipo.slice(1)}
                     </h3>
-                    {/* ⭐ NUEVO: Mostrar nombre del cliente */}
+                    {/* Mostrar nombre del cliente */}
                     <div className="mt-2 p-2 bg-blue-900/20 border border-blue-900/50 rounded">
                       <div className="text-sm">
                         <span className="text-[var(--muted)]">Cliente:</span>

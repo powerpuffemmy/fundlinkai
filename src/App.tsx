@@ -8,6 +8,7 @@ import { WebAdminDashboard } from './pages/WebAdminDashboard'
 import { NuevaSubasta } from './pages/NuevaSubasta'
 import { ClienteSubastas } from './pages/ClienteSubastas'
 import { ClienteCompromisos } from './pages/ClienteCompromisos'
+import { ClienteConfiguracion } from './pages/ClienteConfiguracion'
 import { BancoSolicitudes } from './pages/BancoSolicitudes'
 import { BancoOfertas } from './pages/BancoOfertas'
 import { BancoAprobaciones } from './pages/BancoAprobaciones'
@@ -18,7 +19,7 @@ import { WebAdminSistema } from './pages/WebAdminSistema'
 import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { Button } from './components/common/Button'
 
-type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'compromisos'
+type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'compromisos' | 'configuracion'
 type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'sistema' | 'auditoria'
 type Page = ClientePage | BancoPage | WebAdminPage
@@ -58,6 +59,12 @@ function App() {
             onClick={() => setCurrentPage('compromisos')}
           >
             Compromisos
+          </Button>
+          <Button 
+            variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('configuracion')}
+          >
+            Configuración
           </Button>
         </div>
       )
@@ -151,6 +158,8 @@ function App() {
           return <ClienteSubastas />
         case 'compromisos':
           return <ClienteCompromisos />
+        case 'configuracion':
+          return <ClienteConfiguracion />
         default:
           return <ClienteDashboard onNavigate={setCurrentPage} />
       }

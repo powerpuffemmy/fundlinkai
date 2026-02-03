@@ -108,3 +108,22 @@ export interface Auditoria {
   ip_address?: string
   created_at: string
 }
+
+// ⭐ NUEVO: Interfaces para sistema de límites
+export interface ClienteBancoLimite {
+  id: string
+  cliente_id: string
+  banco_id: string
+  limite_monto: number
+  monto_utilizado: number
+  activo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface SubastaBanco {
+  id: string
+  subasta_id: string
+  banco_id: string
+  invitado_en: string
+}
