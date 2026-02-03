@@ -1,140 +1,108 @@
 import React, { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
-import { Card } from '@/components/common/Card'
-import { Input } from '@/components/common/Input'
-import { Select } from '@/components/common/Select'
 import { Button } from '@/components/common/Button'
+import { Input } from '@/components/common/Input'
 
 export const LoginPage: React.FC = () => {
+  const { login } = useAuthStore()
   const [email, setEmail] = useState('')
-  const [selectedRole, setSelectedRole] = useState('cliente@demo.com')
-  const { login, isLoading } = useAuthStore()
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const usuarios = [
-    { value: 'cliente@demo.com', label: 'Cliente - Juan Pérez' },
-    { value: 'tesoreria@agrosol.com', label: 'Cliente - Agro Sol' },
-    { value: 'admin@bancoatlas.com', label: 'Banco Atlas - Admin' },
-    { value: 'mesa@bancoatlas.com', label: 'Banco Atlas - Mesa' },
-    { value: 'auditor@bancoatlas.com', label: 'Banco Atlas - Auditor' },
-    { value: 'admin@banconova.com', label: 'Banco Nova - Admin' },
-    { value: 'mesa@banconova.com', label: 'Banco Nova - Mesa' },
-    { value: 'admin@fundlink.ai', label: 'WebAdmin - Super Admin' },
-  ]
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    
-    try {
-      await login(selectedRole)
-    } catch (err) {
-      setError('Error al iniciar sesión. Por favor intenta de nuevo.')
-    }
-  }
 
-  const handleQuickLogin = async (userEmail: string) => {
-    setError('')
-    try {
-      await login(userEmail)
-    } catch (err) {
-      setError('Error al iniciar sesión. Por favor intenta de nuevo.')
+    if (!email || !password) {
+      setError('Por favor completa todos los campos')
+      return
     }
+
+    setLoading(true)
+
+    const result = await login(email, password)
+
+    if (!result.success) {
+      setError(result.error || 'Error al iniciar sesión')
+      setLoading(false)
+    }
+    // Si el login es exitoso, el componente App se re-renderizará automáticamente
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
+      <div className="w-full max-w-md">
+        {/* Logo/Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-black mb-2">
-            FUND<span className="text-[var(--link)]">Link</span>
-            <span className="text-[#9b7bff]">AI</span>
+          <h1 className="text-4xl font-black text-white mb-2">
+            FUNDLINK<span className="text-[var(--primary)]">AI</span>
           </h1>
-          <p className="text-[var(--muted)] text-sm">Sistema de Subastas Financieras</p>
+          <p className="text-gray-400 text-sm">
+            Plataforma de Subastas Financieras
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card>
-            <h2 className="text-xl font-bold mb-4">Acceso al Sistema</h2>
-            
-            <form onSubmit={handleLogin} className="space-y-4">
-              <Input
-                label="Correo Electrónico"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@empresa.com"
-              />
+        {/* Login Form */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-8 shadow-2xl">
+          <h2 className="text-2xl font-bold text-white mb-6">Iniciar Sesión</h2>
 
-              <Select
-                label="Seleccionar Usuario"
-                options={usuarios}
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-              />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@empresa.com"
+              required
+              autoComplete="email"
+              disabled={loading}
+            />
 
-              {error && (
-                <div className="text-[var(--bad)] text-sm bg-red-900/20 border border-red-900/50 rounded p-2">
-                  {error}
-                </div>
-              )}
+            <Input
+              label="Contraseña"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              autoComplete="current-password"
+              disabled={loading}
+            />
 
-              <Button 
-                type="submit" 
-                variant="primary" 
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Ingresando...' : 'Entrar'}
-              </Button>
-            </form>
-
-            <div className="mt-4 pt-4 border-t border-[var(--line)]">
-              <p className="text-xs text-[var(--muted)] mb-2">Acceso rápido:</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="small" 
-                  onClick={() => handleQuickLogin('cliente@demo.com')}
-                  disabled={isLoading}
-                >
-                  Cliente
-                </Button>
-                <Button 
-                  variant="small" 
-                  onClick={() => handleQuickLogin('admin@bancoatlas.com')}
-                  disabled={isLoading}
-                >
-                  Banco Admin
-                </Button>
-                <Button 
-                  variant="small" 
-                  onClick={() => handleQuickLogin('mesa@bancoatlas.com')}
-                  disabled={isLoading}
-                >
-                  Banco Mesa
-                </Button>
-                <Button 
-                  variant="small" 
-                  onClick={() => handleQuickLogin('admin@fundlink.ai')}
-                  disabled={isLoading}
-                >
-                  WebAdmin
-                </Button>
+            {error && (
+              <div className="p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-200 text-sm">
+                {error}
               </div>
-            </div>
-          </Card>
+            )}
 
-          <Card>
-            <h3 className="font-bold mb-3">Información del Sistema</h3>
-            <div className="space-y-2 text-sm text-[var(--muted)]">
-              <p>✓ Sistema de subastas en tiempo real</p>
-              <p>✓ Múltiples tipos de subasta (abierta, sellada, holandesa)</p>
-              <p>✓ Gestión de compromisos y vencimientos</p>
-              <p>✓ Ofertas PUSH proactivas</p>
-              <p>✓ Auditoría completa de operaciones</p>
-              <p>✓ Panel de control por rol</p>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? 'Iniciando sesión...' : 'Entrar'}
+            </Button>
+          </form>
+
+          {/* Info de desarrollo */}
+          <div className="mt-6 p-3 bg-blue-900/20 border border-blue-900/50 rounded-lg">
+            <p className="text-xs text-blue-200 mb-2">
+              <strong>Usuarios de prueba:</strong>
+            </p>
+            <div className="text-xs text-blue-300 space-y-1">
+              <div>• Cliente: ana.garcia@corptech.com</div>
+              <div>• Banco: carlos.mendez@bancogt.com</div>
+              <div>• WebAdmin: admin@fundlinkai.com</div>
+              <div className="mt-2 text-blue-400">Contraseña: password123</div>
             </div>
-          </Card>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-6 text-gray-400 text-xs">
+          <p>© 2026 FUNDLinkAI. Todos los derechos reservados.</p>
         </div>
       </div>
     </div>

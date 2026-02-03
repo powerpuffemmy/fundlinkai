@@ -4,76 +4,109 @@ import type { User } from '@/types/database'
 
 interface AuthState {
   user: User | null
-  isLoading: boolean
-  login: (email: string, password?: string) => Promise<void>
-  logout: () => void
+  loading: boolean
+  initialized: boolean
   setUser: (user: User | null) => void
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  logout: () => Promise<void>
+  initialize: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  isLoading: false,
+  loading: true,
+  initialized: false,
 
-  login: async (email: string, _password = 'demo123') => {
-    set({ isLoading: true })
+  setUser: (user) => set({ user }),
+
+  login: async (email: string, password: string) => {
     try {
-      // Buscar el usuario directamente en la tabla users por email
+      // Intentar login con Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (authError) throw authError
+
+      if (!authData.user) {
+        throw new Error('No se pudo obtener usuario')
+      }
+
+      // Obtener datos completos del usuario de la tabla users
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('email', authData.user.email)
         .single()
 
       if (userError) throw userError
-      
-      if (userData) {
-        const user: User = {
-          id: userData.id,
-          email: userData.email,
-          role: userData.role,
-          nombre: userData.nombre,
-          entidad: userData.entidad,
-          activo: userData.activo,
-          created_at: userData.created_at,
-          updated_at: userData.updated_at
-        }
-        set({ user, isLoading: false })
-        
-        // Guardar en localStorage
-        localStorage.setItem('fundlink_user', JSON.stringify(user))
-      } else {
-        throw new Error('Credenciales inválidas')
+
+      if (!userData) {
+        throw new Error('Usuario no encontrado en la base de datos')
       }
-    } catch (error) {
+
+      set({ user: userData, loading: false })
+      return { success: true }
+
+    } catch (error: any) {
       console.error('Error en login:', error)
-      set({ isLoading: false })
-      throw error
+      return { 
+        success: false, 
+        error: error.message || 'Error al iniciar sesión' 
+      }
     }
   },
 
-  logout: () => {
-    set({ user: null })
-    localStorage.removeItem('fundlink_user')
+  logout: async () => {
+    try {
+      await supabase.auth.signOut()
+      set({ user: null })
+    } catch (error) {
+      console.error('Error en logout:', error)
+    }
   },
 
-  setUser: (user: User | null) => {
-    set({ user })
-    if (user) {
-      localStorage.setItem('fundlink_user', JSON.stringify(user))
-    } else {
-      localStorage.removeItem('fundlink_user')
+  initialize: async () => {
+    try {
+      set({ loading: true })
+
+      // Verificar si hay sesión activa
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (session?.user) {
+        // Obtener datos del usuario de la tabla users
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', session.user.email)
+          .single()
+
+        if (error) throw error
+
+        set({ user: userData, loading: false, initialized: true })
+      } else {
+        set({ user: null, loading: false, initialized: true })
+      }
+
+      // Escuchar cambios de autenticación
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', session.user.email)
+            .single()
+
+          set({ user: userData })
+        } else if (event === 'SIGNED_OUT') {
+          set({ user: null })
+        }
+      })
+
+    } catch (error) {
+      console.error('Error inicializando auth:', error)
+      set({ user: null, loading: false, initialized: true })
     }
   }
 }))
-
-// Restaurar sesión desde localStorage al cargar
-const savedUser = localStorage.getItem('fundlink_user')
-if (savedUser) {
-  try {
-    const user = JSON.parse(savedUser)
-    useAuthStore.setState({ user })
-  } catch (error) {
-    console.error('Error al restaurar sesión:', error)
-    localStorage.removeItem('fundlink_user')
-  }
-}

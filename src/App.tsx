@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 import { LoginPage } from './components/auth/LoginPage'
 import { Layout } from './components/common/Layout'
@@ -27,8 +27,23 @@ type WebAdminPage = 'dashboard' | 'usuarios' | 'sistema' | 'auditoria' | 'aproba
 type Page = ClientePage | BancoPage | WebAdminPage
 
 function App() {
-  const { user } = useAuthStore()
+  const { user, loading, initialized, initialize } = useAuthStore()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+
+  useEffect(() => {
+    initialize()
+  }, [])
+
+  if (!initialized || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <p className="text-white text-lg">Cargando...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!user) {
     return <LoginPage />

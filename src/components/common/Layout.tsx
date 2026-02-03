@@ -9,46 +9,49 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuthStore()
 
-  if (!user) return null
-
-  const getRoleLabel = () => {
-    switch (user.role) {
-      case 'cliente': return 'Cliente'
-      case 'banco_admin': return 'Banco - Admin'
-      case 'banco_mesa': return 'Banco - Mesa'
-      case 'banco_auditor': return 'Banco - Auditor'
-      case 'webadmin': return 'WebAdmin'
-      default: return user.role
+  const handleLogout = async () => {
+    if (confirm('¿Seguro que deseas cerrar sesión?')) {
+      await logout()
     }
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-30 bg-[rgba(17,24,39,0.85)] backdrop-blur-md border-b border-[var(--line)]">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-black">
-              FUND<span className="text-[var(--link)]">Link</span>
-              <span className="text-[#9b7bff]">AI</span>
-            </h1>
-            <span className="text-xs bg-[#0e1a33] border border-[#253b66] text-[#9bd1ff] px-2 py-1 rounded-full">
-              {getRoleLabel()}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-right text-sm">
-              <div className="font-semibold">{user.nombre}</div>
-              <div className="text-xs text-[var(--muted)]">{user.entidad}</div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+      {/* Header */}
+      <header className="bg-black/20 backdrop-blur-lg border-b border-white/10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            {/* Logo */}
+            <div>
+              <h1 className="text-2xl font-black text-white">
+                FUNDLINK<span className="text-[var(--primary)]">AI</span>
+              </h1>
             </div>
-            <Button variant="small" onClick={logout}>
-              Salir
-            </Button>
+
+            {/* User info + Logout */}
+            <div className="flex items-center gap-4">
+              {user && (
+                <>
+                  <div className="text-right hidden md:block">
+                    <div className="text-sm font-semibold text-white">
+                      {user.nombre}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {user.entidad}
+                    </div>
+                  </div>
+                  <Button onClick={handleLogout} variant="small">
+                    Cerrar Sesión
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 max-w-7xl">
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6">
         {children}
       </main>
     </div>
