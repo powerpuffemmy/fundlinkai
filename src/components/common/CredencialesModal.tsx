@@ -20,20 +20,45 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
     alert('Credenciales copiadas al portapapeles')
   }
 
+  const handleOpenSupabase = () => {
+    window.open('https://supabase.com/dashboard/project/ewcvkvnnixrxmiruzmie/auth/users', '_blank')
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-[var(--card)] border border-[var(--line)] rounded-lg max-w-md w-full p-6">
         <h3 className="text-xl font-bold mb-4 text-green-400">
-          ✅ Usuario creado exitosamente
+          ✅ Usuario creado en la base de datos
         </h3>
 
-        <div className="mb-6 p-4 bg-green-900/20 border border-green-900/50 rounded-lg">
-          <p className="text-sm text-green-200 mb-3">
-            <strong>✅ CUENTA CREADA:</strong> La cuenta de autenticación fue creada automáticamente.
+        <div className="mb-6 p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg">
+          <p className="text-sm text-blue-200 mb-3">
+            <strong>📋 PASO ADICIONAL REQUERIDO:</strong>
+          </p>
+          <p className="text-sm text-blue-200 mb-3">
+            Debes crear la cuenta de autenticación manualmente en Supabase.
           </p>
           
-          <p className="text-sm text-yellow-200 mb-3">
-            <strong>📧 Envía estas credenciales al usuario:</strong>
+          <ol className="text-sm text-blue-200 space-y-2 list-decimal list-inside mb-3">
+            <li>Click en "Abrir Supabase Auth"</li>
+            <li>Click <strong>"Add user"</strong> → <strong>"Create new user"</strong></li>
+            <li>Pega el email y password de abajo</li>
+            <li>Marca <strong>"Auto Confirm User" ✓</strong></li>
+            <li>Click <strong>"Create user"</strong></li>
+          </ol>
+
+          <Button
+            variant="primary"
+            onClick={handleOpenSupabase}
+            className="w-full mb-3"
+          >
+            🔗 Abrir Supabase Auth
+          </Button>
+        </div>
+
+        <div className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10">
+          <p className="text-xs text-[var(--muted)] mb-3">
+            <strong>Credenciales para crear en Supabase:</strong>
           </p>
           
           <div className="space-y-2">
@@ -45,7 +70,7 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
             </div>
             
             <div>
-              <label className="text-xs text-[var(--muted)]">Contraseña temporal:</label>
+              <label className="text-xs text-[var(--muted)]">Password:</label>
               <div className="font-mono text-sm bg-black/20 p-2 rounded mt-1 break-all">
                 {password}
               </div>
@@ -62,19 +87,19 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
         </div>
 
         {role === 'cliente' && (
-          <div className="mb-4 p-3 bg-blue-900/20 border border-blue-900/50 rounded-lg">
-            <p className="text-sm text-blue-200">
-              El cliente deberá completar su configuración al hacer login por primera vez.
+          <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-900/50 rounded-lg">
+            <p className="text-sm text-yellow-200">
+              💡 El cliente deberá completar su configuración al hacer login por primera vez.
             </p>
           </div>
         )}
 
         <Button
-          variant="primary"
+          variant="secondary"
           onClick={onClose}
           className="w-full"
         >
-          Entendido
+          Ya creé la cuenta en Supabase
         </Button>
       </div>
     </div>

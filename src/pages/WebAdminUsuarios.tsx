@@ -239,48 +239,15 @@ export const WebAdminUsuarios: React.FC = () => {
         // 2. Generar contraseña temporal
         const passwordTemporal = `Temp${Math.random().toString(36).slice(-8)}!`
 
-        // 3. Crear cuenta en Supabase Auth usando Edge Function
-        try {
-          const { data: session } = await supabase.auth.getSession()
-
-          const response = await fetch(
-            'https://ewcvkvnnixrxmiruzmie.supabase.co/functions/v1/create-auth-user',
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${session?.session?.access_token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: email,
-                password: passwordTemporal,
-                nombre: nombre,
-                entidad: entidad,
-                role: role
-              })
-            }
-          )
-
-          const result = await response.json()
-
-          if (!result.success) {
-            throw new Error(result.error || 'Error creando cuenta Auth')
-          }
-
-          console.log('Cuenta Auth creada exitosamente:', result.user)
-
-          // Mostrar credenciales en modal
-          setCredencialesNuevas({
-            email: email,
-            password: passwordTemporal,
-            role: role
-          })
-          setMostrarCredenciales(true)
-
-        } catch (authError: any) {
-          console.error('Error creando cuenta Auth:', authError)
-          alert(`⚠️ Usuario creado en la base de datos, pero hubo un error al crear la cuenta de autenticación.\n\nDeberás crear la cuenta manualmente en Authentication → Users.\n\nError: ${authError.message}`)
-        }
+        // 3. Mostrar credenciales para crear cuenta manualmente en Supabase
+        // NOTA: La creación automática requiere Edge Functions con Service Role Key
+        // Por seguridad y simplicidad, este paso se hace manualmente
+        setCredencialesNuevas({
+          email: email,
+          password: passwordTemporal,
+          role: role
+        })
+        setMostrarCredenciales(true)
 
         await supabase.rpc('log_auditoria', {
           p_user_id: currentUser?.id,
