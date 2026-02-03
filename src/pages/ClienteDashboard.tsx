@@ -6,7 +6,11 @@ import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
 import { formatMoney, formatDate, daysBetween } from '@/lib/utils'
 
-export const ClienteDashboard: React.FC = () => {
+interface ClienteDashboardProps {
+  onNavigate?: (page: 'dashboard' | 'nueva-subasta' | 'subastas' | 'compromisos') => void
+}
+
+export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuthStore()
   const { subastas, loading: loadingSubastas } = useSubastas()
   const { compromisos, loading: loadingCompromisos } = useCompromisos()
@@ -122,7 +126,12 @@ export const ClienteDashboard: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-lg">Compromisos Vigentes</h3>
           {ultimosCompromisos.length > 0 && (
-            <Button variant="small">Ver todos</Button>
+            <Button 
+              variant="small"
+              onClick={() => onNavigate?.('compromisos')}
+            >
+              Ver todos
+            </Button>
           )}
         </div>
 
@@ -132,7 +141,7 @@ export const ClienteDashboard: React.FC = () => {
               No tienes compromisos vigentes aún
             </p>
             <p className="text-sm text-blue-400">
-              💡 Crea una subasta para empezar a recibir ofertas de bancos
+              Crea una subasta para empezar a recibir ofertas de bancos
             </p>
           </div>
         ) : (
@@ -191,7 +200,12 @@ export const ClienteDashboard: React.FC = () => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-lg">Subastas Recientes</h3>
             {ultimasSubastas.length > 0 && (
-              <Button variant="small">Ver todas</Button>
+              <Button 
+                variant="small"
+                onClick={() => onNavigate?.('subastas')}
+              >
+                Ver todas
+              </Button>
             )}
           </div>
 
@@ -200,7 +214,12 @@ export const ClienteDashboard: React.FC = () => {
               <p className="text-[var(--muted)] text-sm mb-3">
                 No has creado subastas aún
               </p>
-              <Button variant="primary">Crear Primera Subasta</Button>
+              <Button 
+                variant="primary"
+                onClick={() => onNavigate?.('nueva-subasta')}
+              >
+                Crear Primera Subasta
+              </Button>
             </div>
           ) : (
             <div className="space-y-2">
@@ -227,7 +246,12 @@ export const ClienteDashboard: React.FC = () => {
                       {formatDate(subasta.created_at)}
                     </span>
                     {subasta.estado === 'abierta' && (
-                      <Button variant="small">Ver Ofertas</Button>
+                      <Button 
+                        variant="small"
+                        onClick={() => onNavigate?.('subastas')}
+                      >
+                        Ver Ofertas
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -241,42 +265,36 @@ export const ClienteDashboard: React.FC = () => {
           <h3 className="font-bold text-lg mb-4">Acceso Rápido</h3>
           
           <div className="space-y-3">
-            <button className="w-full p-4 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/50 rounded-lg text-left transition-colors group">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-blue-200 mb-1">Nueva Subasta</div>
-                  <div className="text-xs text-blue-300">
-                    Crea una solicitud y recibe ofertas de múltiples bancos
-                  </div>
-                </div>
-                <span className="text-2xl group-hover:scale-110 transition-transform">➕</span>
+            <button 
+              className="w-full p-4 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/50 rounded-lg text-left transition-colors group"
+              onClick={() => onNavigate?.('nueva-subasta')}
+            >
+              <div className="font-semibold text-blue-200 mb-1">Nueva Subasta</div>
+              <div className="text-xs text-blue-300">
+                Crea una solicitud y recibe ofertas de múltiples bancos
               </div>
             </button>
 
-            <button className="w-full p-4 bg-green-900/20 hover:bg-green-900/30 border border-green-900/50 rounded-lg text-left transition-colors group">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-green-200 mb-1">Mis Subastas</div>
-                  <div className="text-xs text-green-300">
-                    {subastasAbiertas.length > 0 
-                      ? `${subastasAbiertas.length} subasta(s) esperando ofertas`
-                      : 'Revisa el estado de tus solicitudes'
-                    }
-                  </div>
-                </div>
-                <span className="text-2xl group-hover:scale-110 transition-transform">📊</span>
+            <button 
+              className="w-full p-4 bg-green-900/20 hover:bg-green-900/30 border border-green-900/50 rounded-lg text-left transition-colors group"
+              onClick={() => onNavigate?.('subastas')}
+            >
+              <div className="font-semibold text-green-200 mb-1">Mis Subastas</div>
+              <div className="text-xs text-green-300">
+                {subastasAbiertas.length > 0 
+                  ? `${subastasAbiertas.length} subasta(s) esperando ofertas`
+                  : 'Revisa el estado de tus solicitudes'
+                }
               </div>
             </button>
 
-            <button className="w-full p-4 bg-purple-900/20 hover:bg-purple-900/30 border border-purple-900/50 rounded-lg text-left transition-colors group">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-purple-200 mb-1">Compromisos</div>
-                  <div className="text-xs text-purple-300">
-                    {compromisosVigentes.length} compromiso(s) vigente(s)
-                  </div>
-                </div>
-                <span className="text-2xl group-hover:scale-110 transition-transform">📋</span>
+            <button 
+              className="w-full p-4 bg-purple-900/20 hover:bg-purple-900/30 border border-purple-900/50 rounded-lg text-left transition-colors group"
+              onClick={() => onNavigate?.('compromisos')}
+            >
+              <div className="font-semibold text-purple-200 mb-1">Compromisos</div>
+              <div className="text-xs text-purple-300">
+                {compromisosVigentes.length} compromiso(s) vigente(s)
               </div>
             </button>
           </div>
@@ -285,16 +303,13 @@ export const ClienteDashboard: React.FC = () => {
 
       {/* Tips y Recomendaciones */}
       <Card className="bg-blue-900/10 border-blue-900/30">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">💡</span>
-          <div>
-            <div className="font-semibold text-blue-200 mb-2">Tips de Tesorería</div>
-            <ul className="text-sm text-blue-300 space-y-1">
-              <li>• Crea subastas con tiempo suficiente para recibir múltiples ofertas</li>
-              <li>• Compara las tasas ofrecidas por diferentes bancos</li>
-              <li>• Revisa los compromisos próximos a vencer para planificar renovaciones</li>
-            </ul>
-          </div>
+        <div>
+          <div className="font-semibold text-blue-200 mb-2">Tips de Tesorería</div>
+          <ul className="text-sm text-blue-300 space-y-1">
+            <li>• Crea subastas con tiempo suficiente para recibir múltiples ofertas</li>
+            <li>• Compara las tasas ofrecidas por diferentes bancos</li>
+            <li>• Revisa los compromisos próximos a vencer para planificar renovaciones</li>
+          </ul>
         </div>
       </Card>
     </div>

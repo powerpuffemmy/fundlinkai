@@ -152,7 +152,7 @@ function App() {
         case 'compromisos':
           return <ClienteCompromisos />
         default:
-          return <ClienteDashboard />
+          return <ClienteDashboard onNavigate={setCurrentPage} />
       }
     }
 
@@ -169,7 +169,7 @@ function App() {
         case 'configuracion':
           return <BancoConfiguracion />
         default:
-          return <BancoDashboard />
+          return <BancoDashboard onNavigate={setCurrentPage} />
       }
     }
 

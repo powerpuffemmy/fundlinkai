@@ -7,7 +7,11 @@ import { useSubastas } from '@/hooks/useSubastas'
 import { useAuthStore } from '@/store/authStore'
 import { formatMoney, formatDate, daysBetween } from '@/lib/utils'
 
-export const BancoDashboard: React.FC = () => {
+interface BancoDashboardProps {
+  onNavigate?: (page: 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion') => void
+}
+
+export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuthStore()
   const { compromisos, loading: loadingCompromisos } = useCompromisos()
   const { ofertas, loading: loadingOfertas } = useOfertas()
@@ -124,7 +128,12 @@ export const BancoDashboard: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-lg">Compromisos Vigentes</h3>
           {ultimosCompromisos.length > 0 && (
-            <Button variant="small">Ver todos</Button>
+            <Button 
+              variant="small"
+              onClick={() => onNavigate?.('compromisos')}
+            >
+              Ver todos
+            </Button>
           )}
         </div>
 
@@ -188,7 +197,12 @@ export const BancoDashboard: React.FC = () => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-lg">Ofertas Recientes</h3>
             {ultimasOfertas.length > 0 && (
-              <Button variant="small">Ver todas</Button>
+              <Button 
+                variant="small"
+                onClick={() => onNavigate?.('ofertas')}
+              >
+                Ver todas
+              </Button>
             )}
           </div>
 
@@ -236,7 +250,12 @@ export const BancoDashboard: React.FC = () => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-lg">Solicitudes Disponibles</h3>
             {solicitudesDisponibles.length > 0 && (
-              <Button variant="small">Ver todas</Button>
+              <Button 
+                variant="small"
+                onClick={() => onNavigate?.('solicitudes')}
+              >
+                Ver todas
+              </Button>
             )}
           </div>
 
@@ -265,7 +284,12 @@ export const BancoDashboard: React.FC = () => {
                       <strong>{formatMoney(subasta.monto, subasta.moneda)}</strong>
                       <span className="text-[var(--muted)] ml-2">• {subasta.plazo} días</span>
                     </div>
-                    <Button variant="small">Ofertar</Button>
+                    <Button 
+                      variant="small"
+                      onClick={() => onNavigate?.('solicitudes')}
+                    >
+                      Ofertar
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -277,28 +301,22 @@ export const BancoDashboard: React.FC = () => {
       {/* Nota informativa según el rol */}
       {user?.role === 'banco_mesa' && (
         <Card className="bg-blue-900/10 border-blue-900/30">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">ℹ️</span>
-            <div>
-              <div className="font-semibold text-blue-200 mb-1">Rol: Mesa de Dinero</div>
-              <p className="text-sm text-blue-300">
-                Tus ofertas requieren aprobación del Administrador del banco antes de ser enviadas a los clientes.
-              </p>
-            </div>
+          <div>
+            <div className="font-semibold text-blue-200 mb-1">Rol: Mesa de Dinero</div>
+            <p className="text-sm text-blue-300">
+              Tus ofertas requieren aprobación del Administrador del banco antes de ser enviadas a los clientes.
+            </p>
           </div>
         </Card>
       )}
 
       {user?.role === 'banco_auditor' && (
         <Card className="bg-yellow-900/10 border-yellow-900/30">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div>
-              <div className="font-semibold text-yellow-200 mb-1">Rol: Auditor</div>
-              <p className="text-sm text-yellow-300">
-                Como auditor, tienes acceso de solo lectura. No puedes enviar ofertas ni realizar transacciones.
-              </p>
-            </div>
+          <div>
+            <div className="font-semibold text-yellow-200 mb-1">Rol: Auditor</div>
+            <p className="text-sm text-yellow-300">
+              Como auditor, tienes acceso de solo lectura. No puedes enviar ofertas ni realizar transacciones.
+            </p>
           </div>
         </Card>
       )}
