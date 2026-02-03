@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 import { LoginPage } from './components/auth/LoginPage'
 import { Layout } from './components/common/Layout'
+import { CambiarPasswordModal } from './components/common/CambiarPasswordModal'
+import { supabase } from './lib/supabase'
 import { ClienteDashboard } from './pages/ClienteDashboard'
 import { BancoDashboard } from './pages/BancoDashboard'
 import { WebAdminDashboard } from './pages/WebAdminDashboard'
@@ -29,10 +31,30 @@ type Page = ClientePage | BancoPage | WebAdminPage
 function App() {
   const { user, loading, initialized, initialize } = useAuthStore()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const [mostrarCambioPassword, setMostrarCambioPassword] = useState(false)
 
   useEffect(() => {
     initialize()
   }, [])
+
+  useEffect(() => {
+    // Si es primer login, mostrar modal para cambiar contraseña
+    if (user && user.primer_login) {
+      setMostrarCambioPassword(true)
+    }
+  }, [user])
+
+  const handlePasswordCambiado = async () => {
+    // Marcar que ya no es primer login
+    if (user) {
+      await supabase
+        .from('users')
+        .update({ primer_login: false })
+        .eq('id', user.id)
+    }
+    setMostrarCambioPassword(false)
+    window.location.reload() // Recargar para actualizar el usuario
+  }
 
   if (!initialized || loading) {
     return (
@@ -252,10 +274,17 @@ function App() {
   }
 
   return (
-    <Layout>
-      {getNavigation()}
-      {getPage()}
-    </Layout>
+    <>
+      <Layout>
+        {getNavigation()}
+        {getPage()}
+      </Layout>
+
+      {/* Modal para cambiar contraseña en primer login */}
+      {mostrarCambioPassword && (
+        <CambiarPasswordModal onSuccess={handlePasswordCambiado} />
+      )}
+    </>
   )
 }
 

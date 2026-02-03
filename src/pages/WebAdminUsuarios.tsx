@@ -3,6 +3,7 @@ import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
+import { CredencialesModal } from '@/components/common/CredencialesModal'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import type { User, UserRole } from '@/types/database'
@@ -41,6 +42,10 @@ export const WebAdminUsuarios: React.FC = () => {
   const [entidadPersonalizada, setEntidadPersonalizada] = useState(false)
   const [role, setRole] = useState<UserRole>('cliente')
   const [activo, setActivo] = useState(true)
+
+  // Modal credenciales
+  const [mostrarCredenciales, setMostrarCredenciales] = useState(false)
+  const [credencialesNuevas, setCredencialesNuevas] = useState<{email: string; password: string; role: string} | null>(null)
 
   // Filtros y búsqueda
   const [busqueda, setBusqueda] = useState('')
@@ -213,7 +218,8 @@ export const WebAdminUsuarios: React.FC = () => {
           nombre,
           entidad,
           role,
-          activo
+          activo,
+          primer_login: true  // Debe cambiar password en primer login
         }
 
         // Si es cliente, forzar onboarding
@@ -223,23 +229,48 @@ export const WebAdminUsuarios: React.FC = () => {
           nuevoUsuario.aprobado_por_admin = false
         }
 
+        // 1. Crear en tabla users
         const { error } = await supabase
           .from('users')
           .insert([nuevoUsuario])
 
         if (error) throw error
 
+        // 2. Generar contraseña temporal
+        const passwordTemporal = `Temp${Math.random().toString(36).slice(-8)}!`
+
+        // 3. Crear cuenta en Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: email,
+          password: passwordTemporal,
+          email_confirm: true,
+          user_metadata: {
+            nombre: nombre,
+            entidad: entidad,
+            role: role
+          }
+        })
+
+        if (authError) {
+          console.error('Error creando cuenta Auth:', authError)
+          // No lanzar error, solo avisar
+          alert(`⚠️ Usuario creado en la base de datos, pero hubo un error al crear la cuenta de autenticación.\n\nDeberás crear la cuenta manualmente en Authentication → Users.\n\nError: ${authError.message}`)
+        } else {
+          // Mostrar credenciales en modal
+          setCredencialesNuevas({
+            email: email,
+            password: passwordTemporal,
+            role: role
+          })
+          setMostrarCredenciales(true)
+        }
+
         await supabase.rpc('log_auditoria', {
           p_user_id: currentUser?.id,
           p_accion: 'Crear Usuario',
-          p_detalle: `Usuario ${email} creado`,
-          p_metadata: { email }
+          p_detalle: `Usuario ${email} creado con cuenta Auth`,
+          p_metadata: { email, auth_created: !authError }
         })
-
-        alert(role === 'cliente' 
-          ? 'Cliente creado. Deberá completar su configuración al hacer login.'
-          : 'Usuario creado exitosamente'
-        )
       }
 
       limpiarFormulario()
@@ -573,6 +604,19 @@ export const WebAdminUsuarios: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Modal de credenciales */}
+      {mostrarCredenciales && credencialesNuevas && (
+        <CredencialesModal
+          email={credencialesNuevas.email}
+          password={credencialesNuevas.password}
+          role={credencialesNuevas.role}
+          onClose={() => {
+            setMostrarCredenciales(false)
+            setCredencialesNuevas(null)
+          }}
+        />
+      )}
     </div>
   )
 }

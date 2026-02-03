@@ -26,6 +26,7 @@ export interface User {
   aprobado_por?: string  // ⭐ NUEVO: ID del webadmin que aprobó
   telefono?: string  // ⭐ NUEVO: Teléfono de contacto
   notas_aprobacion?: string  // ⭐ NUEVO: Notas del webadmin
+  primer_login?: boolean  // ⭐ NUEVO: Si debe cambiar contraseña en primer login
   created_at: string
   updated_at: string
 }
