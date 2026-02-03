@@ -37,7 +37,7 @@ function App() {
   // Si es cliente y no ha completado onboarding, mostrar pantalla de configuración
   if (user.role === 'cliente' && !user.onboarding_completado) {
     return (
-      <Layout user={user}>
+      <Layout>
         <ClienteOnboarding />
       </Layout>
     )
@@ -46,7 +46,7 @@ function App() {
   // Si es cliente aprobado pero no activo, mostrar mensaje de espera
   if (user.role === 'cliente' && user.onboarding_completado && !user.aprobado_por_admin) {
     return (
-      <Layout user={user}>
+      <Layout>
         <div className="max-w-2xl mx-auto text-center py-12">
           <div className="text-6xl mb-4">⏳</div>
           <h2 className="text-2xl font-bold mb-4">Cuenta en Revisión</h2>
