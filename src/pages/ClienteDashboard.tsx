@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Card } from '@/components/common/Card'
+import { CardSkeleton, CompromisosSkeleton } from '@/components/common/Skeleton'
 import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
@@ -79,6 +80,31 @@ export const ClienteDashboard: React.FC = () => {
   const tasaPromedio = totalCompromisos > 0
     ? misCompromisos.reduce((sum, c) => sum + c.tasa, 0) / totalCompromisos
     : 0
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold">Panel de Tesorería</h2>
+        
+        {/* Loading skeletons */}
+        <CardSkeleton count={4} />
+        
+        <Card>
+          <CompromisosSkeleton />
+        </Card>
+        
+        <Card>
+          <div className="grid md:grid-cols-3 gap-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="p-3 bg-white/5 rounded-lg">
+                <div className="h-16 bg-white/10 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

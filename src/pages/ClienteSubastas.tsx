@@ -6,6 +6,8 @@ import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDateTime, addDays } from '@/lib/utils'
+import { toastSuccess, toastError } from '@/lib/toastUtils'
+import { useConfirm } from '@/components/common/ConfirmModal'
 import type { Oferta } from '@/types/database'
 
 interface OfertaConBanco extends Oferta {
@@ -17,6 +19,7 @@ export const ClienteSubastas: React.FC = () => {
   const { user } = useAuthStore()
   const { subastas, loading: loadingSubastas, actualizarSubasta } = useSubastas()
   const { crearCompromiso } = useCompromisos()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [ofertasPorSubasta, setOfertasPorSubasta] = useState<Record<string, OfertaConBanco[]>>({})
   const [loadingOfertas, setLoadingOfertas] = useState(false)
   const [aprobando, setAprobando] = useState<Record<string, boolean>>({})
@@ -62,115 +65,115 @@ export const ClienteSubastas: React.FC = () => {
     cargarOfertas()
   }, [misSubastas.length])
 
-  const handleRecordarVencimiento = (subasta_id: string) => {
-    const subasta = misSubastas.find(s => s.id === subasta_id)
-    if (!subasta) return
-
-    alert(`⏰ Recordatorio configurado\n\nTe notificaremos cuando la subasta esté próxima a vencer.\n\nSubasta: ${formatMoney(subasta.monto, subasta.moneda)}\nVence: ${formatDateTime(subasta.expires_at)}`)
-    
-    // TODO: Implementar sistema de notificaciones real
-  }
-
   const handleAprobar = async (subasta_id: string, oferta: OfertaConBanco) => {
     if (!user) return
 
-    const confirmar = window.confirm(
-      `¿Confirmas aprobar la oferta de ${oferta.banco_entidad} al ${oferta.tasa}%?\n\nEsto generará un compromiso automáticamente.`
-    )
+    confirm({
+      title: 'Aprobar Oferta',
+      message: `¿Confirmas aprobar la oferta de ${oferta.banco_entidad} al ${oferta.tasa}%? Esto generará un compromiso automáticamente.`,
+      confirmText: 'Aprobar',
+      confirmVariant: 'primary',
+      onConfirm: async () => {
+        try {
+          setAprobando(prev => ({ ...prev, [oferta.id]: true }))
 
-    if (!confirmar) return
+          const subasta = misSubastas.find(s => s.id === subasta_id)
+          if (!subasta) throw new Error('Subasta no encontrada')
 
-    try {
-      setAprobando(prev => ({ ...prev, [oferta.id]: true }))
+          // Actualizar estado de la oferta a 'aprobada'
+          const { error: errorOferta } = await supabase
+            .from('ofertas')
+            .update({ estado: 'aprobada' })
+            .eq('id', oferta.id)
 
-      const subasta = misSubastas.find(s => s.id === subasta_id)
-      if (!subasta) throw new Error('Subasta no encontrada')
+          if (errorOferta) throw errorOferta
 
-      // Actualizar estado de la oferta a 'aprobada'
-      const { error: errorOferta } = await supabase
-        .from('ofertas')
-        .update({ estado: 'aprobada' })
-        .eq('id', oferta.id)
+          // Rechazar otras ofertas de esta subasta
+          const { error: errorOtras } = await supabase
+            .from('ofertas')
+            .update({ estado: 'rechazada' })
+            .eq('subasta_id', subasta_id)
+            .neq('id', oferta.id)
 
-      if (errorOferta) throw errorOferta
+          if (errorOtras) throw errorOtras
 
-      // Rechazar otras ofertas de esta subasta
-      const { error: errorOtras } = await supabase
-        .from('ofertas')
-        .update({ estado: 'rechazada' })
-        .eq('subasta_id', subasta_id)
-        .neq('id', oferta.id)
+          // Generar OP_ID único
+          const opId = 'OP-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
+          const fechaInicio = new Date().toISOString().split('T')[0]
+          const fechaVencimiento = addDays(fechaInicio, subasta.plazo)
 
-      if (errorOtras) throw errorOtras
+          // Crear compromiso
+          await crearCompromiso({
+            op_id: opId,
+            cliente_id: user.id,
+            banco_id: oferta.banco_id,
+            subasta_id: subasta_id,
+            oferta_id: oferta.id,
+            monto: subasta.monto,
+            moneda: subasta.moneda,
+            tasa: oferta.tasa,
+            plazo: subasta.plazo,
+            fecha_inicio: fechaInicio,
+            fecha_vencimiento: fechaVencimiento,
+            estado: 'vigente'
+          })
 
-      // Generar OP_ID único
-      const opId = 'OP-' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
-      const fechaInicio = new Date().toISOString().split('T')[0]
-      const fechaVencimiento = addDays(fechaInicio, subasta.plazo)
+          // Cerrar subasta
+          await actualizarSubasta(subasta_id, { estado: 'cerrada' })
 
-      // Crear compromiso
-      await crearCompromiso({
-        op_id: opId,
-        cliente_id: user.id,
-        banco_id: oferta.banco_id,
-        subasta_id: subasta_id,
-        oferta_id: oferta.id,
-        monto: subasta.monto,
-        moneda: subasta.moneda,
-        tasa: oferta.tasa,
-        plazo: subasta.plazo,
-        fecha_inicio: fechaInicio,
-        fecha_vencimiento: fechaVencimiento,
-        estado: 'vigente'
-      })
+          // Log auditoría
+          await supabase.rpc('log_auditoria', {
+            p_user_id: user.id,
+            p_accion: 'Aprobar Oferta',
+            p_detalle: `Compromiso ${opId} generado con ${oferta.banco_entidad} al ${oferta.tasa}%`,
+            p_metadata: { 
+              compromiso_id: opId,
+              oferta_id: oferta.id,
+              subasta_id: subasta_id
+            }
+          })
 
-      // Cerrar subasta
-      await actualizarSubasta(subasta_id, { estado: 'cerrada' })
+          toastSuccess(`¡Compromiso ${opId} creado exitosamente! Monto: ${formatMoney(subasta.monto, subasta.moneda)} | Tasa: ${oferta.tasa}% | Plazo: ${subasta.plazo} días`, 5000)
 
-      // Log auditoría
-      await supabase.rpc('log_auditoria', {
-        p_user_id: user.id,
-        p_accion: 'Aprobar Oferta',
-        p_detalle: `Compromiso ${opId} generado con ${oferta.banco_entidad} al ${oferta.tasa}%`,
-        p_metadata: { 
-          compromiso_id: opId,
-          oferta_id: oferta.id,
-          subasta_id: subasta_id
+          // Recargar ofertas
+          setTimeout(() => window.location.reload(), 2000)
+
+        } catch (error) {
+          console.error('Error al aprobar oferta:', error)
+          toastError('Error al aprobar la oferta. Por favor intenta de nuevo.')
+        } finally {
+          setAprobando(prev => ({ ...prev, [oferta.id]: false }))
         }
-      })
-
-      alert(`¡Compromiso ${opId} creado exitosamente!\n\nMonto: ${formatMoney(subasta.monto, subasta.moneda)}\nTasa: ${oferta.tasa}%\nPlazo: ${subasta.plazo} días`)
-
-      // Recargar ofertas
-      window.location.reload()
-
-    } catch (error) {
-      console.error('Error al aprobar oferta:', error)
-      alert('Error al aprobar la oferta. Por favor intenta de nuevo.')
-    } finally {
-      setAprobando(prev => ({ ...prev, [oferta.id]: false }))
-    }
+      }
+    })
   }
 
   const handleRechazar = async (oferta_id: string) => {
-    const confirmar = window.confirm('¿Confirmas rechazar esta oferta?')
-    if (!confirmar) return
+    confirm({
+      title: 'Rechazar Oferta',
+      message: '¿Confirmas rechazar esta oferta?',
+      confirmText: 'Rechazar',
+      confirmVariant: 'primary',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase
+            .from('ofertas')
+            .update({ estado: 'rechazada' })
+            .eq('id', oferta_id)
 
-    try {
-      const { error } = await supabase
-        .from('ofertas')
-        .update({ estado: 'rechazada' })
-        .eq('id', oferta_id)
+          if (error) throw error
 
-      if (error) throw error
+          toastSuccess('Oferta rechazada exitosamente')
 
-      // Recargar ofertas
-      window.location.reload()
+          // Recargar ofertas
+          setTimeout(() => window.location.reload(), 1500)
 
-    } catch (error) {
-      console.error('Error al rechazar oferta:', error)
-      alert('Error al rechazar la oferta.')
-    }
+        } catch (error) {
+          console.error('Error al rechazar oferta:', error)
+          toastError('Error al rechazar la oferta.')
+        }
+      }
+    })
   }
 
   const getEstadoBadge = (estado: string) => {
@@ -196,40 +199,7 @@ export const ClienteSubastas: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Mis Subastas y Ofertas</h2>
-        <p className="text-[var(--muted)] mt-1">
-          Gestiona tus solicitudes de colocación y revisa las ofertas recibidas
-        </p>
-      </div>
-
-      {/* ⭐ NUEVO: Resumen de Subastas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <div className="text-sm text-[var(--muted)]">Subastas ABIERTAS</div>
-          <div className="text-2xl font-black mt-1 text-green-400">
-            {misSubastas.filter(s => s.estado === 'abierta').length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-sm text-[var(--muted)]">ESPERANDO Ofertas</div>
-          <div className="text-2xl font-black mt-1 text-blue-400">
-            {misSubastas.filter(s => s.estado === 'esperando').length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-sm text-[var(--muted)]">CERRADAS</div>
-          <div className="text-2xl font-black mt-1 text-gray-400">
-            {misSubastas.filter(s => s.estado === 'cerrada').length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-sm text-[var(--muted)]">Total de Ofertas</div>
-          <div className="text-2xl font-black mt-1 text-purple-400">
-            {Object.values(ofertasPorSubasta).reduce((sum, ofertas) => sum + ofertas.length, 0)}
-          </div>
-        </Card>
-      </div>
+      <h2 className="text-2xl font-bold">Mis Subastas y Ofertas</h2>
 
       {misSubastas.length === 0 ? (
         <Card>
@@ -279,26 +249,8 @@ export const ClienteSubastas: React.FC = () => {
                 {loadingOfertas ? (
                   <p className="text-sm text-[var(--muted)]">Cargando ofertas...</p>
                 ) : ofertas.length === 0 ? (
-                  <div className="p-4 bg-yellow-900/10 border border-yellow-900/30 rounded">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm text-yellow-200 font-semibold mb-1">
-                          ⏰ No has recibido ofertas aún
-                        </p>
-                        <p className="text-xs text-yellow-300">
-                          Los bancos tienen hasta {formatDateTime(subasta.expires_at)} para ofertar
-                        </p>
-                      </div>
-                      {/* ⭐ NUEVO: Botón de recordatorio */}
-                      {subasta.estado === 'abierta' && (
-                        <Button 
-                          variant="small"
-                          onClick={() => handleRecordarVencimiento(subasta.id)}
-                        >
-                          Recordar Vencimiento
-                        </Button>
-                      )}
-                    </div>
+                  <div className="p-4 bg-white/5 rounded text-center text-sm text-[var(--muted)]">
+                    No hay ofertas para esta subasta
                   </div>
                 ) : (
                   <div>
@@ -367,6 +319,9 @@ export const ClienteSubastas: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Modal de confirmación */}
+      <ConfirmDialog />
     </div>
   )
 }

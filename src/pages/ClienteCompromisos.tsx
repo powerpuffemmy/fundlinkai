@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
+import { Skeleton, CardSkeleton, TableSkeleton } from '@/components/common/Skeleton'
 import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
@@ -63,8 +64,13 @@ export const ClienteCompromisos: React.FC = () => {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Mis Compromisos</h2>
+        
+        {/* Loading skeletons para cards */}
+        <CardSkeleton count={3} />
+        
+        {/* Loading skeleton para tabla */}
         <Card>
-          <p className="text-[var(--muted)]">Cargando...</p>
+          <TableSkeleton rows={5} cols={9} />
         </Card>
       </div>
     )
