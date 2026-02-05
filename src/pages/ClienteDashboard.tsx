@@ -5,12 +5,13 @@ import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDate } from '@/lib/utils'
 import { calcularVencimiento, getIconoVencimiento } from '@/lib/vencimientoUtils'
+import type { Moneda } from '@/types/database'
 
 interface CompromisoConBanco {
   id: string
   op_id: string
   monto: number
-  moneda: string
+  moneda: Moneda
   tasa: number
   fecha_vencimiento: string
   banco_nombre?: string

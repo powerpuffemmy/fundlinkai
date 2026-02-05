@@ -234,7 +234,7 @@ function App() {
         case 'configuracion':
           return <ClienteConfiguracion />
         default:
-          return <ClienteDashboard onNavigate={setCurrentPage} />
+          return <ClienteDashboard />
       }
     }
 
