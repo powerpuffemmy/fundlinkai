@@ -34,7 +34,12 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
   const [moneda, setMoneda] = useState<Moneda>('USD')
   const [monto, setMonto] = useState('10000000')
   const [plazo, setPlazo] = useState('30')
+  const [plazoPersonalizado, setPlazoPersonalizado] = useState('')
+  const [usarPlazoPersonalizado, setUsarPlazoPersonalizado] = useState(false)
   const [duracion, setDuracion] = useState('30')
+  const [duracionPersonalizada, setDuracionPersonalizada] = useState('')
+  const [usarDuracionPersonalizada, setUsarDuracionPersonalizada] = useState(false)
+  const [tasaObjetivo, setTasaObjetivo] = useState('')
   
   // Estados del flujo
   const [paso, setPaso] = useState<1 | 2>(1) // Paso 1: Formulario, Paso 2: Selección bancos
@@ -88,6 +93,21 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
       setLoading(true)
 
       const montoNum = parseFloat(monto)
+      const plazoFinal = usarPlazoPersonalizado ? parseInt(plazoPersonalizado) : parseInt(plazo)
+      const duracionFinal = usarDuracionPersonalizada ? parseInt(duracionPersonalizada) : parseInt(duracion)
+
+      // Validaciones
+      if (usarPlazoPersonalizado && (!plazoPersonalizado || plazoFinal < 1)) {
+        setError('El plazo personalizado debe ser al menos 1 día')
+        setLoading(false)
+        return
+      }
+
+      if (usarDuracionPersonalizada && (!duracionPersonalizada || duracionFinal < 5)) {
+        setError('El tiempo de respuesta debe ser al menos 5 minutos')
+        setLoading(false)
+        return
+      }
 
       // Obtener bancos disponibles para este monto
       const bancos = await obtenerBancosDisponibles(montoNum)
@@ -100,15 +120,16 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
 
       // Guardar datos temporales
       const expiresAt = new Date()
-      expiresAt.setMinutes(expiresAt.getMinutes() + parseInt(duracion))
+      expiresAt.setMinutes(expiresAt.getMinutes() + duracionFinal)
 
       setSubastaTemp({
         cliente_id: user.id,
         tipo: tipo as TipoSubasta,
         moneda: moneda as Moneda,
         monto: montoNum,
-        plazo: parseInt(plazo),
-        duracion: parseInt(duracion),
+        plazo: plazoFinal,
+        duracion: duracionFinal,
+        tasa_objetivo: tasaObjetivo ? parseFloat(tasaObjetivo) : null,
         tramos: [100],
         estado: 'esperando', // Temporalmente en "esperando"
         aprobada: false,
@@ -256,17 +277,92 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
               />
 
               <Select
-                label="Plazo"
+                label="Plazo de Inversión"
                 options={plazos}
                 value={plazo}
-                onChange={(e) => setPlazo(e.target.value)}
+                onChange={(e) => {
+                  setPlazo(e.target.value)
+                  setUsarPlazoPersonalizado(false)
+                }}
+                disabled={usarPlazoPersonalizado}
               />
 
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="plazoPersonalizado"
+                  checked={usarPlazoPersonalizado}
+                  onChange={(e) => {
+                    setUsarPlazoPersonalizado(e.target.checked)
+                    if (!e.target.checked) setPlazoPersonalizado('')
+                  }}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="plazoPersonalizado" className="text-sm cursor-pointer">
+                  Plazo personalizado (días)
+                </label>
+              </div>
+
+              {usarPlazoPersonalizado && (
+                <Input
+                  label="Días de plazo"
+                  type="number"
+                  value={plazoPersonalizado}
+                  onChange={(e) => setPlazoPersonalizado(e.target.value)}
+                  min="1"
+                  max="3650"
+                  placeholder="Ej: 45"
+                  required
+                />
+              )}
+
               <Select
-                label="Duración de la Subasta"
+                label="Tiempo de Respuesta"
                 options={duraciones}
                 value={duracion}
-                onChange={(e) => setDuracion(e.target.value)}
+                onChange={(e) => {
+                  setDuracion(e.target.value)
+                  setUsarDuracionPersonalizada(false)
+                }}
+                disabled={usarDuracionPersonalizada}
+              />
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="duracionPersonalizada"
+                  checked={usarDuracionPersonalizada}
+                  onChange={(e) => {
+                    setUsarDuracionPersonalizada(e.target.checked)
+                    if (!e.target.checked) setDuracionPersonalizada('')
+                  }}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="duracionPersonalizada" className="text-sm cursor-pointer">
+                  Tiempo personalizado (minutos)
+                </label>
+              </div>
+
+              {usarDuracionPersonalizada && (
+                <Input
+                  label="Minutos para responder"
+                  type="number"
+                  value={duracionPersonalizada}
+                  onChange={(e) => setDuracionPersonalizada(e.target.value)}
+                  min="5"
+                  max="10080"
+                  placeholder="Ej: 120"
+                  required
+                />
+              )}
+
+              <Input
+                label="Tasa Objetivo (%) - Opcional"
+                type="number"
+                step="0.01"
+                value={tasaObjetivo}
+                onChange={(e) => setTasaObjetivo(e.target.value)}
+                placeholder="Ej: 5.50"
               />
 
               {error && (
@@ -305,12 +401,22 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--muted)]">Plazo:</span>
-                <span className="font-semibold">{plazo} días</span>
+                <span className="font-semibold">
+                  {usarPlazoPersonalizado ? plazoPersonalizado : plazo} días
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Duración:</span>
-                <span className="font-semibold">{duracion} minutos</span>
+                <span className="text-[var(--muted)]">Tiempo de respuesta:</span>
+                <span className="font-semibold">
+                  {usarDuracionPersonalizada ? duracionPersonalizada : duracion} min
+                </span>
               </div>
+              {tasaObjetivo && (
+                <div className="flex justify-between">
+                  <span className="text-[var(--muted)]">Tasa Objetivo:</span>
+                  <span className="font-semibold text-[var(--good)]">{tasaObjetivo}%</span>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 p-3 bg-blue-900/20 border border-blue-900/50 rounded">

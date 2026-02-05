@@ -10,6 +10,7 @@ import { BancoDashboard } from './pages/BancoDashboard'
 import { WebAdminDashboard } from './pages/WebAdminDashboard'
 import { NuevaSubasta } from './pages/NuevaSubasta'
 import { ClienteSubastas } from './pages/ClienteSubastas'
+import { HistorialSubastas } from './pages/HistorialSubastas'
 import { ClienteCompromisos } from './pages/ClienteCompromisos'
 import { ClienteConfiguracion } from './pages/ClienteConfiguracion'
 import { ClienteOnboarding } from './pages/ClienteOnboarding'
@@ -24,7 +25,7 @@ import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { Button } from './components/common/Button'
 
-type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'compromisos' | 'configuracion'
+type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'configuracion'
 type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'sistema' | 'auditoria' | 'aprobaciones'
 type Page = ClientePage | BancoPage | WebAdminPage
@@ -121,6 +122,12 @@ function App() {
             onClick={() => setCurrentPage('subastas')}
           >
             Mis Subastas
+          </Button>
+          <Button 
+            variant={currentPage === 'historial' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('historial')}
+          >
+            Historial
           </Button>
           <Button 
             variant={currentPage === 'compromisos' ? 'primary' : 'secondary'}
@@ -230,6 +237,8 @@ function App() {
           return <NuevaSubasta onSubastaCreada={() => setCurrentPage('subastas')} />
         case 'subastas':
           return <ClienteSubastas />
+        case 'historial':
+          return <HistorialSubastas />
         case 'compromisos':
           return <ClienteCompromisos />
         case 'configuracion':
