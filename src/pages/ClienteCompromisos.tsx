@@ -1,43 +1,63 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
-import { formatMoney, formatDate, daysBetween } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { formatMoney, formatDate } from '@/lib/utils'
 import { generarPDFCompromiso } from '@/lib/pdfGenerator'
+import { calcularVencimiento, getColorBgVencimiento, getIconoVencimiento } from '@/lib/vencimientoUtils'
+import type { Compromiso } from '@/types/database'
+
+interface CompromisoConBanco extends Compromiso {
+  banco_nombre?: string
+  banco_entidad?: string
+}
 
 export const ClienteCompromisos: React.FC = () => {
   const { user } = useAuthStore()
-  const { compromisos, loading } = useCompromisos()
+  const { compromisos: comprimisosBase, loading } = useCompromisos()
+  const [compromisos, setCompromisos] = useState<CompromisoConBanco[]>([])
 
-  // Filtrar solo los compromisos del cliente actual
-  const misCompromisos = compromisos.filter(c => c.cliente_id === user?.id)
+  const misCompromisos = comprimisosBase.filter(c => c.cliente_id === user?.id)
 
-  const getDiasRestantes = (fechaVencimiento: string) => {
-    const hoy = new Date().toISOString().split('T')[0]
-    const dias = daysBetween(hoy, fechaVencimiento)
-    return dias
-  }
+  // Cargar datos del banco para cada compromiso
+  useEffect(() => {
+    const cargarDatosBancos = async () => {
+      if (misCompromisos.length === 0) return
 
-  const getAlertClass = (dias: number) => {
-    if (dias <= 7) return 'text-[var(--bad)]'
-    if (dias <= 30) return 'text-[var(--warn)]'
-    return 'text-[var(--good)]'
-  }
+      try {
+        const promesas = misCompromisos.map(async (comp) => {
+          const { data: banco } = await supabase
+            .from('users')
+            .select('nombre, entidad')
+            .eq('id', comp.banco_id)
+            .single()
 
-  const handleGenerarPDF = (comp: any) => {
-    // Mapear los datos para el PDF con la estructura correcta
-    const compromisoParaPDF = {
-      ...comp,
-      banco_nombre: comp.banco?.nombre,
-      banco_entidad: comp.banco?.entidad,
-      banco_logo_url: comp.banco?.logo_url,  // ⭐ NUEVO: Logo del banco
-      cliente_nombre: comp.cliente?.nombre,
-      cliente_entidad: comp.cliente?.entidad,
+          return {
+            ...comp,
+            banco_nombre: banco?.nombre,
+            banco_entidad: banco?.entidad
+          }
+        })
+
+        const resultado = await Promise.all(promesas)
+        setCompromisos(resultado)
+      } catch (error) {
+        console.error('Error cargando bancos:', error)
+        setCompromisos(misCompromisos)
+      }
     }
-    
-    generarPDFCompromiso(compromisoParaPDF)
-  }
+
+    cargarDatosBancos()
+  }, [misCompromisos.length])
+
+  // ⭐ NUEVO: Filtrar compromisos próximos a vencer (< 15 días)
+  const compromisosProximosVencer = compromisos
+    .filter(c => c.estado === 'vigente')
+    .map(c => ({ ...c, vencimiento: calcularVencimiento(c.fecha_vencimiento) }))
+    .filter(c => c.vencimiento.diasRestantes <= 15 && c.vencimiento.diasRestantes >= 0)
+    .sort((a, b) => a.vencimiento.diasRestantes - b.vencimiento.diasRestantes)
 
   if (loading) {
     return (
@@ -54,22 +74,23 @@ export const ClienteCompromisos: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Mis Compromisos</h2>
 
+      {/* Cards de resumen */}
       <div className="grid md:grid-cols-3 gap-4">
         <Card>
           <div className="text-sm text-[var(--muted)]">Total Compromisos</div>
-          <div className="text-2xl font-black mt-1">{misCompromisos.length}</div>
+          <div className="text-2xl font-black mt-1">{compromisos.length}</div>
         </Card>
         <Card>
           <div className="text-sm text-[var(--muted)]">Vigentes</div>
           <div className="text-2xl font-black mt-1 text-[var(--good)]">
-            {misCompromisos.filter(c => c.estado === 'vigente').length}
+            {compromisos.filter(c => c.estado === 'vigente').length}
           </div>
         </Card>
         <Card>
           <div className="text-sm text-[var(--muted)]">Monto Total</div>
           <div className="text-2xl font-black mt-1">
             {formatMoney(
-              misCompromisos
+              compromisos
                 .filter(c => c.estado === 'vigente')
                 .reduce((sum, c) => sum + c.monto, 0),
               'USD'
@@ -78,7 +99,52 @@ export const ClienteCompromisos: React.FC = () => {
         </Card>
       </div>
 
-      {misCompromisos.length === 0 ? (
+      {/* ⭐ NUEVO: Alerta de compromisos próximos a vencer */}
+      {compromisosProximosVencer.length > 0 && (
+        <Card className="bg-red-900/10 border-red-900/50">
+          <div className="flex items-start gap-3">
+            <div className="text-3xl">⚠️</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-lg mb-2 text-red-400">
+                Compromisos Próximos a Vencer
+              </h3>
+              <p className="text-sm text-[var(--muted)] mb-3">
+                Tienes {compromisosProximosVencer.length} compromiso(s) que vence(n) en los próximos 15 días
+              </p>
+              <div className="space-y-2">
+                {compromisosProximosVencer.slice(0, 3).map(comp => (
+                  <div 
+                    key={comp.id}
+                    className="flex items-center justify-between p-3 bg-black/20 rounded border border-red-900/30"
+                  >
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">{comp.banco_entidad}</div>
+                      <div className="text-xs text-[var(--muted)]">
+                        {formatMoney(comp.monto, comp.moneda)} • OP-{comp.op_id}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-bold ${comp.vencimiento.color}`}>
+                        {getIconoVencimiento(comp.vencimiento.estado)} {comp.vencimiento.texto}
+                      </div>
+                      <div className="text-xs text-[var(--muted)]">
+                        {formatDate(comp.fecha_vencimiento)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {compromisosProximosVencer.length > 3 && (
+                <p className="text-xs text-[var(--muted)] mt-2">
+                  + {compromisosProximosVencer.length - 3} más en la tabla
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {compromisos.length === 0 ? (
         <Card>
           <p className="text-[var(--muted)] text-center py-8">
             No tienes compromisos vigentes.
@@ -102,9 +168,8 @@ export const ClienteCompromisos: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {misCompromisos.map(comp => {
-                  const diasRestantes = getDiasRestantes(comp.fecha_vencimiento)
-                  const alertClass = getAlertClass(diasRestantes)
+                {compromisos.map(comp => {
+                  const vencimientoInfo = calcularVencimiento(comp.fecha_vencimiento)
 
                   return (
                     <tr key={comp.id} className="border-b border-[var(--line)] hover:bg-white/5">
@@ -112,8 +177,8 @@ export const ClienteCompromisos: React.FC = () => {
                         <span className="font-mono text-sm font-semibold">{comp.op_id}</span>
                       </td>
                       <td className="p-3">
-                        <div className="font-semibold text-sm">{comp.banco?.entidad}</div>
-                        <div className="text-xs text-[var(--muted)]">{comp.banco?.nombre}</div>
+                        <div className="font-semibold text-sm">{comp.banco_entidad}</div>
+                        <div className="text-xs text-[var(--muted)]">{comp.banco_nombre}</div>
                       </td>
                       <td className="p-3 font-semibold">
                         {formatMoney(comp.monto, comp.moneda)}
@@ -124,8 +189,9 @@ export const ClienteCompromisos: React.FC = () => {
                       <td className="p-3 text-sm">{formatDate(comp.fecha_inicio)}</td>
                       <td className="p-3 text-sm">{formatDate(comp.fecha_vencimiento)}</td>
                       <td className="p-3">
-                        <span className={`font-semibold ${alertClass}`}>
-                          {diasRestantes} días
+                        {/* ⭐ NUEVO: Badge con color según urgencia */}
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold border ${vencimientoInfo.color} ${getColorBgVencimiento(vencimientoInfo.estado)}`}>
+                          {getIconoVencimiento(vencimientoInfo.estado)} {vencimientoInfo.texto}
                         </span>
                       </td>
                       <td className="p-3">
@@ -140,7 +206,7 @@ export const ClienteCompromisos: React.FC = () => {
                       <td className="p-3">
                         <Button
                           variant="small"
-                          onClick={() => handleGenerarPDF(comp)}
+                          onClick={() => generarPDFCompromiso(comp)}
                         >
                           Ver PDF
                         </Button>
