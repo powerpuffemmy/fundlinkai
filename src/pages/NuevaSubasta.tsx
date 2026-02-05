@@ -8,6 +8,7 @@ import { useClienteBancoLimites } from '@/hooks/useClienteBancoLimites'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/lib/utils'
+import { toastSuccess, toastError } from '@/lib/toastUtils'
 import type { TipoSubasta, Moneda } from '@/types/database'
 
 interface NuevaSubastaProps {
@@ -133,7 +134,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
   // PASO 2: Confirmar y abrir subasta con bancos seleccionados
   const handleConfirmarSubasta = async () => {
     if (!subastaTemp || bancosSeleccionados.size === 0) {
-      alert('Debes seleccionar al menos un banco')
+      toastError('Debes seleccionar al menos un banco')
       return
     }
 
@@ -171,7 +172,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
         }
       })
 
-      alert(`¡Subasta creada exitosamente!\n\n${bancosSeleccionados.size} banco(s) pueden ofertar durante ${duracion} minutos.`)
+      toastSuccess(`¡Subasta creada exitosamente! ${bancosSeleccionados.size} banco(s) pueden ofertar durante ${duracion} minutos.`, 4000)
       
       setTimeout(() => {
         if (onSubastaCreada) {
@@ -181,7 +182,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
 
     } catch (err) {
       console.error(err)
-      alert('Error al crear la subasta. Por favor intenta de nuevo.')
+      toastError('Error al crear la subasta. Por favor intenta de nuevo.')
     } finally {
       setLoading(false)
     }

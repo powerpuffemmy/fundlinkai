@@ -7,6 +7,7 @@ import { useOfertas } from '@/hooks/useOfertas'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDateTime } from '@/lib/utils'
+import { toastSuccess, toastError, toastCustom } from '@/lib/toastUtils'
 import type { Subasta } from '@/types/database'
 
 export const BancoSolicitudes: React.FC = () => {
@@ -65,13 +66,13 @@ export const BancoSolicitudes: React.FC = () => {
 
     const tasa = parseFloat(tasas[subasta.id] || '0')
     if (tasa <= 0 || tasa > 100) {
-      alert('Por favor ingresa una tasa válida entre 0 y 100')
+      toastError('Por favor ingresa una tasa válida entre 0 y 100')
       return
     }
 
     // Verificar permisos
     if (user.role === 'banco_auditor') {
-      alert('Los auditores no pueden enviar ofertas')
+      toastCustom('Los auditores no pueden enviar ofertas', '⚠️')
       return
     }
 
@@ -89,14 +90,14 @@ export const BancoSolicitudes: React.FC = () => {
         notas: ''
       })
 
-      alert(`Oferta enviada exitosamente al ${tasa}%`)
+      toastSuccess(`Oferta enviada exitosamente al ${tasa}%`)
       
       // Limpiar el campo de tasa
       setTasas(prev => ({ ...prev, [subasta.id]: '' }))
 
     } catch (error) {
       console.error('Error al ofertar:', error)
-      alert('Error al enviar la oferta. Por favor intenta de nuevo.')
+      toastError('Error al enviar la oferta. Por favor intenta de nuevo.')
     } finally {
       setEnviando(prev => ({ ...prev, [subasta.id]: false }))
     }
