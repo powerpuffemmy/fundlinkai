@@ -198,6 +198,32 @@ export const WebAdminUsuarios: React.FC = () => {
     }
   }
 
+  const handleToggleAIPro = async (usuario: User) => {
+    try {
+      const nuevoEstado = !usuario.ai_pro
+
+      const { error } = await supabase
+        .from('users')
+        .update({ ai_pro: nuevoEstado })
+        .eq('id', usuario.id)
+
+      if (error) throw error
+
+      await supabase.rpc('log_auditoria', {
+        p_user_id: currentUser?.id,
+        p_accion: nuevoEstado ? 'Activar AI Pro' : 'Desactivar AI Pro',
+        p_detalle: `Banco ${usuario.entidad} - ${usuario.email}`,
+        p_metadata: { user_id: usuario.id, ai_pro: nuevoEstado }
+      })
+
+      toastSuccess(nuevoEstado ? 'Banco marcado como AI Pro ⭐' : 'Banco cambiado a Regular')
+      await cargarUsuarios()
+    } catch (error: any) {
+      console.error('Error:', error)
+      toastError('Error al actualizar estado AI Pro')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -290,6 +316,7 @@ export const WebAdminUsuarios: React.FC = () => {
                 <th className="text-left p-3 text-sm text-[var(--muted)]">Entidad</th>
                 <th className="text-left p-3 text-sm text-[var(--muted)]">Rol</th>
                 <th className="text-left p-3 text-sm text-[var(--muted)]">Estado</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">AI Pro</th>
                 <th className="text-right p-3 text-sm text-[var(--muted)]">Acciones</th>
               </tr>
             </thead>
@@ -312,6 +339,22 @@ export const WebAdminUsuarios: React.FC = () => {
                     }`}>
                       {usuario.activo ? 'Activo' : 'Inactivo'}
                     </span>
+                  </td>
+                  <td className="p-3">
+                    {usuario.role.startsWith('banco') ? (
+                      <button
+                        onClick={() => handleToggleAIPro(usuario)}
+                        className={`text-xs px-2 py-1 rounded border transition-colors ${
+                          usuario.ai_pro
+                            ? 'bg-purple-900/20 border-purple-500/50 text-purple-200'
+                            : 'bg-gray-900/20 border-gray-700 text-gray-400 hover:bg-gray-800/30'
+                        }`}
+                      >
+                        {usuario.ai_pro ? '⭐ AI Pro' : 'Regular'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-[var(--muted)]">N/A</span>
+                    )}
                   </td>
                   <td className="p-3">
                     <div className="flex gap-2 justify-end">

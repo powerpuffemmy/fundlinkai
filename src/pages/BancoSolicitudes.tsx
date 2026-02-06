@@ -7,7 +7,6 @@ import { useOfertas } from '@/hooks/useOfertas'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDateTime } from '@/lib/utils'
-import { toastSuccess, toastError, toastCustom } from '@/lib/toastUtils'
 import type { Subasta } from '@/types/database'
 
 export const BancoSolicitudes: React.FC = () => {
@@ -66,13 +65,13 @@ export const BancoSolicitudes: React.FC = () => {
 
     const tasa = parseFloat(tasas[subasta.id] || '0')
     if (tasa <= 0 || tasa > 100) {
-      toastError('Por favor ingresa una tasa válida entre 0 y 100')
+      alert('Por favor ingresa una tasa válida entre 0 y 100')
       return
     }
 
     // Verificar permisos
     if (user.role === 'banco_auditor') {
-      toastCustom('Los auditores no pueden enviar ofertas', '⚠️')
+      alert('Los auditores no pueden enviar ofertas')
       return
     }
 
@@ -90,14 +89,14 @@ export const BancoSolicitudes: React.FC = () => {
         notas: ''
       })
 
-      toastSuccess(`Oferta enviada exitosamente al ${tasa}%`)
+      alert(`Oferta enviada exitosamente al ${tasa}%`)
       
       // Limpiar el campo de tasa
       setTasas(prev => ({ ...prev, [subasta.id]: '' }))
 
     } catch (error) {
       console.error('Error al ofertar:', error)
-      toastError('Error al enviar la oferta. Por favor intenta de nuevo.')
+      alert('Error al enviar la oferta. Por favor intenta de nuevo.')
     } finally {
       setEnviando(prev => ({ ...prev, [subasta.id]: false }))
     }
@@ -221,6 +220,18 @@ export const BancoSolicitudes: React.FC = () => {
                         {getTiempoRestante(subasta.expires_at)}
                       </span>
                     </div>
+                    
+                    {/* Tasa objetivo - Solo visible para bancos AI Pro */}
+                    {user?.ai_pro && subasta.tasa_objetivo && (
+                      <div className="flex justify-between items-center mt-3 p-2 bg-purple-900/20 border border-purple-500/30 rounded">
+                        <span className="text-purple-200 text-xs flex items-center gap-1">
+                          ⭐ Tasa Objetivo:
+                        </span>
+                        <span className="font-bold text-purple-200">
+                          {subasta.tasa_objetivo}%
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

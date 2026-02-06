@@ -23,6 +23,7 @@ export interface User {
   nombre: string
   entidad: string
   activo: boolean
+  ai_pro?: boolean
   logo_url?: string
   created_at: string
   updated_at: string
