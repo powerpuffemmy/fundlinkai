@@ -18,6 +18,7 @@ import { BancoSolicitudes } from './pages/BancoSolicitudes'
 import { BancoOfertas } from './pages/BancoOfertas'
 import { BancoAprobaciones } from './pages/BancoAprobaciones'
 import { BancoCompromisos } from './pages/BancoCompromisos'
+import { BancoClientes } from './pages/BancoClientes'
 import { BancoConfiguracion } from './pages/BancoConfiguracion'
 import { WebAdminUsuarios } from './pages/WebAdminUsuarios'
 import { WebAdminSistema } from './pages/WebAdminSistema'
@@ -26,7 +27,7 @@ import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { Button } from './components/common/Button'
 
 type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'configuracion'
-type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion'
+type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'sistema' | 'auditoria' | 'aprobaciones'
 type Page = ClientePage | BancoPage | WebAdminPage
 
@@ -180,6 +181,14 @@ function App() {
           >
             Compromisos
           </Button>
+          {user.role === 'banco_admin' && (
+            <Button 
+              variant={currentPage === 'clientes' ? 'primary' : 'secondary'}
+              onClick={() => setCurrentPage('clientes')}
+            >
+              Clientes
+            </Button>
+          )}
           <Button 
             variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('configuracion')}
@@ -258,6 +267,8 @@ function App() {
           return <BancoAprobaciones />
         case 'compromisos':
           return <BancoCompromisos />
+        case 'clientes':
+          return <BancoClientes />
         case 'configuracion':
           return <BancoConfiguracion />
         default:
