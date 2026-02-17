@@ -110,27 +110,25 @@ export const WebAdminUsuarios: React.FC = () => {
 
         toastSuccess('Usuario actualizado exitosamente')
       } else {
-        // Crear nuevo
-        const { error } = await supabase
-          .from('users')
-          .insert([{
-            email,
-            nombre,
-            entidad,
-            role,
-            activo
-          }])
+        // Crear nuevo via Edge Function (crea en auth.users + public.users con mismo UUID)
+        const { data: { session } } = await supabase.auth.getSession()
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-auth-user`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ email, password: 'Fundlink2025!', nombre, entidad, role, activo })
+          }
+        )
 
-        if (error) throw error
+        const result = await response.json()
+        if (!result.success) throw new Error(result.error || 'Error creando usuario')
 
-        await supabase.rpc('log_auditoria', {
-          p_user_id: currentUser?.id,
-          p_accion: 'Crear Usuario',
-          p_detalle: `Usuario ${email} creado`,
-          p_metadata: { email }
-        })
-
-        toastSuccess('Usuario creado exitosamente')
+        toastSuccess(`Usuario creado. Contraseña temporal: Fundlink2025!`)
       }
 
       limpiarFormulario()
