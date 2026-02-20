@@ -258,3 +258,53 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET row_security = off;
 
 GRANT EXECUTE ON FUNCTION obtener_ofertas_subasta(uuid) TO authenticated;
+
+-- =====================
+-- 9. RPC obtener_compromisos_usuario (con SECURITY DEFINER)
+-- Clientes y bancos necesitan ver nombre/entidad de la contraparte,
+-- pero RLS impide el join directo a users. Esta RPC lo resuelve.
+-- Usada en ClienteCompromisos.tsx y BancoCompromisos.tsx para el PDF.
+-- =====================
+CREATE OR REPLACE FUNCTION obtener_compromisos_usuario(p_user_id uuid)
+RETURNS TABLE(
+  id uuid,
+  op_id text,
+  cliente_id uuid,
+  banco_id uuid,
+  subasta_id uuid,
+  oferta_id uuid,
+  monto numeric,
+  moneda text,
+  tasa numeric,
+  plazo integer,
+  fecha_inicio date,
+  fecha_vencimiento date,
+  estado text,
+  notas text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  banco_nombre text,
+  banco_entidad text,
+  cliente_nombre text,
+  cliente_entidad text
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    c.id, c.op_id, c.cliente_id, c.banco_id, c.subasta_id, c.oferta_id,
+    c.monto, c.moneda, c.tasa, c.plazo,
+    c.fecha_inicio, c.fecha_vencimiento,
+    c.estado, c.notas, c.created_at, c.updated_at,
+    banco.nombre   AS banco_nombre,
+    banco.entidad  AS banco_entidad,
+    cli.nombre     AS cliente_nombre,
+    cli.entidad    AS cliente_entidad
+  FROM compromisos c
+  INNER JOIN users banco ON banco.id = c.banco_id
+  INNER JOIN users cli   ON cli.id   = c.cliente_id
+  WHERE c.cliente_id = p_user_id OR c.banco_id = p_user_id
+  ORDER BY c.created_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET row_security = off;
+
+GRANT EXECUTE ON FUNCTION obtener_compromisos_usuario(uuid) TO authenticated;

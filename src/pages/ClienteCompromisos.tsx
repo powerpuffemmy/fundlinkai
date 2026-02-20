@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Skeleton, CardSkeleton, TableSkeleton } from '@/components/common/Skeleton'
-import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDate } from '@/lib/utils'
@@ -13,45 +12,34 @@ import type { Compromiso } from '@/types/database'
 interface CompromisoConBanco extends Compromiso {
   banco_nombre?: string
   banco_entidad?: string
+  cliente_nombre?: string
+  cliente_entidad?: string
 }
 
 export const ClienteCompromisos: React.FC = () => {
   const { user } = useAuthStore()
-  const { compromisos: comprimisosBase, loading } = useCompromisos()
+  const [loading, setLoading] = useState(true)
   const [compromisos, setCompromisos] = useState<CompromisoConBanco[]>([])
 
-  const misCompromisos = comprimisosBase.filter(c => c.cliente_id === user?.id)
-
-  // Cargar datos del banco para cada compromiso
+  // Usar RPC con SECURITY DEFINER para obtener compromisos con datos de banco y cliente
+  // (el join directo a users falla por RLS para el rol cliente)
   useEffect(() => {
-    const cargarDatosBancos = async () => {
-      if (misCompromisos.length === 0) return
-
+    const cargarCompromisos = async () => {
+      if (!user) return
+      setLoading(true)
       try {
-        const promesas = misCompromisos.map(async (comp) => {
-          const { data: banco } = await supabase
-            .from('users')
-            .select('nombre, entidad')
-            .eq('id', comp.banco_id)
-            .single()
-
-          return {
-            ...comp,
-            banco_nombre: banco?.nombre,
-            banco_entidad: banco?.entidad
-          }
-        })
-
-        const resultado = await Promise.all(promesas)
-        setCompromisos(resultado)
+        const { data, error } = await supabase
+          .rpc('obtener_compromisos_usuario', { p_user_id: user.id })
+        if (error) throw error
+        setCompromisos((data || []) as CompromisoConBanco[])
       } catch (error) {
-        console.error('Error cargando bancos:', error)
-        setCompromisos(misCompromisos)
+        console.error('Error cargando compromisos:', error)
+      } finally {
+        setLoading(false)
       }
     }
-
-    cargarDatosBancos()
-  }, [misCompromisos.length])
+    cargarCompromisos()
+  }, [user?.id])
 
   // ⭐ NUEVO: Filtrar compromisos próximos a vencer (< 15 días)
   const compromisosProximosVencer = compromisos
