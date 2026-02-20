@@ -62,7 +62,7 @@ export const ClienteOnboarding: React.FC = () => {
     
     // Pre-seleccionar todos con límite de 10M
     const seleccion: Record<string, number> = {}
-    bancos.forEach(b => {
+    bancos.forEach((b: { id: string; nombre: string; entidad: string }) => {
       seleccion[b.id] = 10000000 // 10M por defecto
     })
     setBancosSeleccionados(seleccion)

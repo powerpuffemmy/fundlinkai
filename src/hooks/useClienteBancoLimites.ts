@@ -132,11 +132,7 @@ export const useClienteBancoLimites = () => {
   const obtenerTodosBancos = async () => {
     try {
       const { data, error } = await supabase
-        .from('users')
-        .select('id, nombre, entidad')
-        .in('role', ['banco_admin', 'banco_mesa'])
-        .eq('activo', true)
-        .order('entidad')
+        .rpc('obtener_todos_bancos')
 
       if (error) throw error
       return data || []
