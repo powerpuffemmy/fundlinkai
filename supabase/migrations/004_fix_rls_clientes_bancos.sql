@@ -200,3 +200,61 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET row_security = off;
 
 GRANT EXECUTE ON FUNCTION obtener_bancos_disponibles(uuid, numeric) TO authenticated;
+
+-- =====================
+-- 6. Policy INSERT en compromisos para clientes
+-- El cliente crea el compromiso al aprobar una oferta
+-- =====================
+CREATE POLICY "compromisos_cliente_insert" ON compromisos
+  FOR INSERT WITH CHECK (
+    cliente_id = auth.uid() AND get_user_role() = 'cliente'
+  );
+
+-- =====================
+-- 7. Policy UPDATE en ofertas para clientes
+-- El cliente puede aprobar/rechazar ofertas de sus propias subastas
+-- =====================
+CREATE POLICY "ofertas_cliente_update" ON ofertas
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM subastas s
+      WHERE s.id = ofertas.subasta_id AND s.cliente_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM subastas s
+      WHERE s.id = ofertas.subasta_id AND s.cliente_id = auth.uid()
+    )
+  );
+
+-- =====================
+-- 8. RPC obtener_ofertas_subasta (con SECURITY DEFINER para leer banco info)
+-- El cliente no puede hacer join a users por RLS, pero necesita ver el nombre
+-- del banco que hizo la oferta.
+-- =====================
+CREATE OR REPLACE FUNCTION obtener_ofertas_subasta(p_subasta_id uuid)
+RETURNS TABLE(
+  id uuid,
+  subasta_id uuid,
+  banco_id uuid,
+  tasa numeric,
+  estado text,
+  created_at timestamptz,
+  banco_nombre text,
+  banco_entidad text
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    o.id, o.subasta_id, o.banco_id, o.tasa, o.estado::text, o.created_at,
+    u.nombre AS banco_nombre,
+    u.entidad AS banco_entidad
+  FROM ofertas o
+  INNER JOIN users u ON u.id = o.banco_id
+  WHERE o.subasta_id = p_subasta_id
+  ORDER BY o.tasa DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET row_security = off;
+
+GRANT EXECUTE ON FUNCTION obtener_ofertas_subasta(uuid) TO authenticated;

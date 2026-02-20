@@ -37,20 +37,10 @@ export const ClienteSubastas: React.FC = () => {
 
         for (const subasta of misSubastas) {
           const { data: ofertas, error } = await supabase
-            .from('ofertas')
-            .select(`
-              *,
-              banco:users!ofertas_banco_id_fkey(nombre, entidad)
-            `)
-            .eq('subasta_id', subasta.id)
-            .order('tasa', { ascending: false })
+            .rpc('obtener_ofertas_subasta', { p_subasta_id: subasta.id })
 
           if (!error && ofertas) {
-            resultado[subasta.id] = ofertas.map(o => ({
-              ...o,
-              banco_nombre: o.banco?.nombre,
-              banco_entidad: o.banco?.entidad
-            }))
+            resultado[subasta.id] = ofertas as OfertaConBanco[]
           }
         }
 
