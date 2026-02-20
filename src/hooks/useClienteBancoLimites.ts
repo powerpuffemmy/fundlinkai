@@ -15,6 +15,7 @@ interface BancoDisponible {
   limite_monto: number
   monto_utilizado: number
   monto_disponible: number
+  todos_user_ids: string[]
 }
 
 export const useClienteBancoLimites = () => {

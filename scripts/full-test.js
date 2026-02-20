@@ -133,10 +133,10 @@ async function main() {
     else
       fail('RLS limites cliente', 'Puede ver datos de otros: ' + JSON.stringify(otrosLimites).substring(0, 100));
 
-    // 2.4 obtener_bancos_disponibles
+    // 2.4 obtener_bancos_disponibles (ahora retorna 1 banco por entidad con todos_user_ids)
     const bancosDisp = await rpc('obtener_bancos_disponibles', mariaAuth, { p_cliente_id: MARIA_ID, p_monto: 10000000 });
-    if (Array.isArray(bancosDisp) && bancosDisp.length >= 5)
-      ok(`obtener_bancos_disponibles ($10M) → ${bancosDisp.length} registros con limite disponible`);
+    if (Array.isArray(bancosDisp) && bancosDisp.length === 5 && bancosDisp[0]?.todos_user_ids?.length >= 1)
+      ok(`obtener_bancos_disponibles ($10M) → ${bancosDisp.length} bancos, cada uno con ${bancosDisp[0].todos_user_ids.length} user(s)`);
     else
       fail('obtener_bancos_disponibles', JSON.stringify(bancosDisp));
 
@@ -172,14 +172,15 @@ async function main() {
       fail('Crear subasta', JSON.stringify(subastas));
     }
 
-    // 3.2 Invitar bancos a la subasta
+    // 3.2 Invitar banco BI (admin + mesa) a la subasta
     if (subastaId) {
+      // Simulamos el comportamiento del frontend: insertar todos_user_ids del banco
       const bancosInvitados = [BANCO_ADMIN_BI_ID, BANCO_MESA_BI_ID].map(bid => ({
         subasta_id: subastaId, banco_id: bid
       }));
       const invResult = await rest('POST', '/subasta_bancos', mariaAuth, bancosInvitados);
       if (Array.isArray(invResult) && invResult.length === 2)
-        ok(`Invitar 2 bancos a subasta`);
+        ok(`Invitar Banco Industrial (admin + mesa) a subasta → 2 entradas en subasta_bancos`);
       else if (invResult && !invResult.code)
         ok(`Invitar bancos a subasta (respuesta non-array)`);
       else

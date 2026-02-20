@@ -22,6 +22,7 @@ interface BancoDisponible {
   limite_monto: number
   monto_utilizado: number
   monto_disponible: number
+  todos_user_ids: string[]
 }
 
 export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) => {
@@ -170,11 +171,13 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
 
       if (!subasta) throw new Error('Error al crear subasta')
 
-      // Insertar los bancos seleccionados en subasta_bancos
-      const bancosInvitados = Array.from(bancosSeleccionados).map(banco_id => ({
-        subasta_id: subasta.id,
-        banco_id: banco_id
-      }))
+      // Insertar todos los usuarios de cada banco seleccionado en subasta_bancos
+      // (admin + mesa) para que todos puedan ver y ofertar en la subasta
+      const bancosInvitados = Array.from(bancosSeleccionados).flatMap(banco_id => {
+        const banco = bancosDisponibles.find(b => b.banco_id === banco_id)
+        const userIds = banco?.todos_user_ids ?? [banco_id]
+        return userIds.map(uid => ({ subasta_id: subasta.id, banco_id: uid }))
+      })
 
       const { error: errorBancos } = await supabase
         .from('subasta_bancos')
@@ -193,7 +196,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
         }
       })
 
-      toastSuccess(`¡Subasta creada exitosamente! ${bancosSeleccionados.size} banco(s) pueden ofertar durante ${duracion} minutos.`, 4000)
+      toastSuccess(`¡Subasta creada exitosamente! ${bancosSeleccionados.size} banco(s) invitados durante ${duracion} minutos.`, 4000)
       
       setTimeout(() => {
         if (onSubastaCreada) {

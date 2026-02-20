@@ -147,6 +147,9 @@ GRANT EXECUTE ON FUNCTION obtener_todos_bancos() TO authenticated;
 
 -- =====================
 -- 5. RPC obtener_bancos_disponibles con SECURITY DEFINER
+-- Retorna 1 fila por banco (representado por banco_admin).
+-- todos_user_ids incluye todos los usuarios del banco (admin + mesa)
+-- para que al invitar se inserten todas las entradas en subasta_bancos.
 -- =====================
 CREATE OR REPLACE FUNCTION obtener_bancos_disponibles(p_cliente_id uuid, p_monto numeric)
 RETURNS TABLE(
@@ -155,25 +158,44 @@ RETURNS TABLE(
   banco_entidad text,
   limite_monto numeric,
   monto_utilizado numeric,
-  monto_disponible numeric
+  monto_disponible numeric,
+  todos_user_ids uuid[]
 ) AS $$
 BEGIN
   RETURN QUERY
+  WITH banco_admins AS (
+    -- Un registro por banco (usando banco_admin como representante)
+    SELECT
+      admin_u.id AS banco_id,
+      admin_u.nombre AS banco_nombre,
+      admin_u.entidad AS banco_entidad,
+      cbl.limite_monto,
+      cbl.monto_utilizado,
+      (cbl.limite_monto - cbl.monto_utilizado) AS monto_disponible
+    FROM users admin_u
+    INNER JOIN cliente_banco_limites cbl ON admin_u.id = cbl.banco_id
+    WHERE cbl.cliente_id = p_cliente_id
+      AND admin_u.activo = true
+      AND admin_u.role = 'banco_admin'
+      AND cbl.activo = true
+      AND (cbl.limite_monto - cbl.monto_utilizado) >= p_monto
+  )
   SELECT
-    u.id AS banco_id,
-    u.nombre AS banco_nombre,
-    u.entidad AS banco_entidad,
-    cbl.limite_monto,
-    cbl.monto_utilizado,
-    (cbl.limite_monto - cbl.monto_utilizado) AS monto_disponible
-  FROM users u
-  INNER JOIN cliente_banco_limites cbl ON u.id = cbl.banco_id
-  WHERE cbl.cliente_id = p_cliente_id
-    AND u.activo = true
-    AND u.role IN ('banco_admin', 'banco_mesa')
-    AND cbl.activo = true
-    AND (cbl.limite_monto - cbl.monto_utilizado) >= p_monto
-  ORDER BY u.entidad;
+    ba.banco_id,
+    ba.banco_nombre,
+    ba.banco_entidad,
+    ba.limite_monto,
+    ba.monto_utilizado,
+    ba.monto_disponible,
+    -- Recopilar todos los user IDs del mismo banco (admin + mesa)
+    ARRAY(
+      SELECT u2.id FROM users u2
+      WHERE u2.entidad = ba.banco_entidad
+        AND u2.activo = true
+        AND u2.role IN ('banco_admin', 'banco_mesa', 'banco_auditor')
+    ) AS todos_user_ids
+  FROM banco_admins ba
+  ORDER BY ba.banco_entidad;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET row_security = off;
 
