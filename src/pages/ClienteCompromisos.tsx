@@ -87,7 +87,7 @@ export const ClienteCompromisos: React.FC = () => {
               compromisos
                 .filter(c => c.estado === 'vigente')
                 .reduce((sum, c) => sum + c.monto, 0),
-              'USD'
+              'GTQ'
             )}
           </div>
         </Card>

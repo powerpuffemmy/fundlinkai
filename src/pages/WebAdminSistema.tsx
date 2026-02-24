@@ -116,7 +116,7 @@ export const WebAdminSistema: React.FC = () => {
         </Card>
         <Card>
           <div className="text-xs text-[var(--muted)]">Monto Total</div>
-          <div className="text-xl font-black mt-1">{formatMoney(stats.montoTotal, 'USD')}</div>
+          <div className="text-xl font-black mt-1">{formatMoney(stats.montoTotal, 'GTQ')}</div>
         </Card>
         <Card>
           <div className="text-xs text-[var(--muted)]">Tasa Promedio</div>

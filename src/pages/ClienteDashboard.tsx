@@ -118,7 +118,7 @@ export const ClienteDashboard: React.FC = () => {
         <Card>
           <div className="text-sm text-[var(--muted)]">Monto Total</div>
           <div className="text-2xl font-black mt-1">
-            {formatMoney(montoTotal, 'USD')}
+            {formatMoney(montoTotal, 'GTQ')}
           </div>
         </Card>
         <Card>

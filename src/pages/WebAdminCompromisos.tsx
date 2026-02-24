@@ -221,7 +221,7 @@ export const WebAdminCompromisos: React.FC = () => {
           <div className="text-2xl font-black mt-1">
             {formatMoney(
               compromisosFiltrados.reduce((sum, c) => sum + c.monto, 0),
-              'USD'
+              'GTQ'
             )}
           </div>
         </Card>
@@ -324,9 +324,9 @@ export const WebAdminCompromisos: React.FC = () => {
                     <div className="text-xs text-[var(--muted)]">{data.cantidad} compromiso(s)</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">{formatMoney(data.monto, 'USD')}</div>
+                    <div className="font-bold">{formatMoney(data.monto, 'GTQ')}</div>
                     <div className="text-xs text-[var(--muted)]">
-                      Prom: {formatMoney(data.monto / data.cantidad, 'USD')}
+                      Prom: {formatMoney(data.monto / data.cantidad, 'GTQ')}
                     </div>
                   </div>
                 </div>
@@ -349,9 +349,9 @@ export const WebAdminCompromisos: React.FC = () => {
                     <div className="text-xs text-[var(--muted)]">{data.cantidad} compromiso(s)</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">{formatMoney(data.monto, 'USD')}</div>
+                    <div className="font-bold">{formatMoney(data.monto, 'GTQ')}</div>
                     <div className="text-xs text-[var(--muted)]">
-                      Prom: {formatMoney(data.monto / data.cantidad, 'USD')}
+                      Prom: {formatMoney(data.monto / data.cantidad, 'GTQ')}
                     </div>
                   </div>
                 </div>

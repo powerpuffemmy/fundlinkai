@@ -1,5 +1,5 @@
-export const formatMoney = (amount: number, currency: 'USD' | 'GTQ' = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', {
+export const formatMoney = (amount: number, currency: 'USD' | 'GTQ' = 'GTQ'): string => {
+  return new Intl.NumberFormat('es-GT', {
     style: 'currency',
     currency: currency,
     minimumFractionDigits: 0,

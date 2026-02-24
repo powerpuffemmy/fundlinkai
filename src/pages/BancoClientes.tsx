@@ -165,7 +165,7 @@ export const BancoClientes: React.FC = () => {
           <div className="text-2xl font-black mt-1">
             {formatMoney(
               clientes.reduce((sum, c) => sum + c.limite_monto, 0),
-              'USD'
+              'GTQ'
             )}
           </div>
         </Card>
@@ -228,19 +228,19 @@ export const BancoClientes: React.FC = () => {
                     <div className="flex justify-between text-sm">
                       <span className="text-[var(--muted)]">Límite asignado:</span>
                       <span className="font-semibold">
-                        {formatMoney(cliente.limite_monto, 'USD')}
+                        {formatMoney(cliente.limite_monto, 'GTQ')}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-[var(--muted)]">Utilizado:</span>
                       <span className="font-semibold text-[var(--warn)]">
-                        {formatMoney(cliente.monto_utilizado, 'USD')}
+                        {formatMoney(cliente.monto_utilizado, 'GTQ')}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-[var(--muted)]">Disponible:</span>
                       <span className="font-semibold text-[var(--good)]">
-                        {formatMoney(cliente.monto_disponible, 'USD')}
+                        {formatMoney(cliente.monto_disponible, 'GTQ')}
                       </span>
                     </div>
 
@@ -308,13 +308,13 @@ export const BancoClientes: React.FC = () => {
                 <div>
                   <span className="text-[var(--muted)]">Límite:</span>
                   <div className="font-semibold">
-                    {formatMoney(clienteSeleccionado.limite_monto, 'USD')}
+                    {formatMoney(clienteSeleccionado.limite_monto, 'GTQ')}
                   </div>
                 </div>
                 <div>
                   <span className="text-[var(--muted)]">Disponible:</span>
                   <div className="font-semibold text-[var(--good)]">
-                    {formatMoney(clienteSeleccionado.monto_disponible, 'USD')}
+                    {formatMoney(clienteSeleccionado.monto_disponible, 'GTQ')}
                   </div>
                 </div>
               </div>

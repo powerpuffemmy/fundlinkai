@@ -4,22 +4,25 @@ import { Button } from '@/components/common/Button'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDateTime } from '@/lib/utils'
-import type { Oferta } from '@/types/database'
 
-interface OfertaConDetalles extends Oferta {
-  banco_nombre?: string
-  subasta?: {
-    monto: number
-    moneda: string
-    plazo: number
-    tipo: string
-  }
-  usuario_nombre?: string
+interface OfertaPendiente {
+  id: string
+  subasta_id: string
+  banco_id: string
+  tasa: number
+  estado: string
+  aprobada_por_admin: boolean
+  created_at: string
+  usuario_nombre: string
+  subasta_monto: number
+  subasta_moneda: string
+  subasta_plazo: number
+  subasta_tipo: string
 }
 
 export const BancoAprobaciones: React.FC = () => {
   const { user } = useAuthStore()
-  const [ofertas, setOfertas] = useState<OfertaConDetalles[]>([])
+  const [ofertas, setOfertas] = useState<OfertaPendiente[]>([])
   const [loading, setLoading] = useState(true)
   const [procesando, setProcesando] = useState<Record<string, boolean>>({})
 
@@ -29,45 +32,14 @@ export const BancoAprobaciones: React.FC = () => {
     try {
       setLoading(true)
 
-      // Obtener ofertas de usuarios del mismo banco que requieren aprobación
-      const { data: mismosBanco, error: errorUsuarios } = await supabase
-        .from('users')
-        .select('id')
-        .eq('entidad', user.entidad)
-        .eq('role', 'banco_mesa')
-
-      if (errorUsuarios) throw errorUsuarios
-
-      const idsUsuarios = mismosBanco?.map(u => u.id) || []
-
-      if (idsUsuarios.length === 0) {
-        setOfertas([])
-        return
-      }
-
-      // Obtener ofertas pendientes de aprobación
+      // Usamos RPC con SECURITY DEFINER para evitar bloqueo de RLS
+      // (banco_admin no puede ver filas de otros usuarios en `users` por política)
       const { data, error } = await supabase
-        .from('ofertas')
-        .select(`
-          *,
-          banco:users!ofertas_banco_id_fkey(nombre),
-          subasta:subastas(monto, moneda, plazo, tipo)
-        `)
-        .in('banco_id', idsUsuarios)
-        .eq('aprobada_por_admin', false)
-        .eq('estado', 'enviada')
-        .order('created_at', { ascending: false })
+        .rpc('obtener_ofertas_pendientes_admin')
 
       if (error) throw error
 
-      const ofertasConDetalles = data?.map(o => ({
-        ...o,
-        banco_nombre: o.banco?.nombre,
-        usuario_nombre: o.banco?.nombre,
-        subasta: Array.isArray(o.subasta) ? o.subasta[0] : o.subasta
-      })) || []
-
-      setOfertas(ofertasConDetalles)
+      setOfertas((data || []) as OfertaPendiente[])
     } catch (error) {
       console.error('Error cargando ofertas:', error)
     } finally {
@@ -198,12 +170,13 @@ export const BancoAprobaciones: React.FC = () => {
                       <div className="text-xs text-[var(--muted)]">Mesa de Dinero</div>
                     </td>
                     <td className="p-3 text-sm">
-                      {oferta.subasta?.tipo || '—'}
+                      {oferta.subasta_tipo || '—'}
                     </td>
                     <td className="p-3 font-semibold">
-                      {oferta.subasta ? formatMoney(oferta.subasta.monto, oferta.subasta.moneda as 'USD' | 'GTQ') : '—'}                    </td>
+                      {formatMoney(oferta.subasta_monto, oferta.subasta_moneda as 'GTQ' | 'USD')}
+                    </td>
                     <td className="p-3 text-sm">
-                      {oferta.subasta?.plazo || '—'} días
+                      {oferta.subasta_plazo || '—'} días
                     </td>
                     <td className="p-3">
                       <span className="font-bold text-[var(--good)] text-lg">{oferta.tasa}%</span>

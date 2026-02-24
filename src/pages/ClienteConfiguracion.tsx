@@ -184,20 +184,20 @@ export const ClienteConfiguracion: React.FC = () => {
                           />
                         ) : (
                           <span className="font-semibold">
-                            {formatMoney(limite.limite_monto, 'USD')}
+                            {formatMoney(limite.limite_monto, 'GTQ')}
                           </span>
                         )}
                       </td>
                       <td className="p-3">
                         <span className={porcentajeUsado > 80 ? 'text-[var(--warn)]' : ''}>
-                          {formatMoney(limite.monto_utilizado, 'USD')}
+                          {formatMoney(limite.monto_utilizado, 'GTQ')}
                         </span>
                       </td>
                       <td className="p-3">
                         <span className={`font-semibold ${
                           disponible < 1000000 ? 'text-[var(--bad)]' : 'text-[var(--good)]'
                         }`}>
-                          {formatMoney(disponible, 'USD')}
+                          {formatMoney(disponible, 'GTQ')}
                         </span>
                       </td>
                       <td className="p-3">

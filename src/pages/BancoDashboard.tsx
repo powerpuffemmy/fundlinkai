@@ -106,7 +106,7 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
         <Card>
           <div className="text-sm text-[var(--muted)]">Monto Colocado</div>
           <div className="text-2xl font-black mt-1">
-            {formatMoney(montoTotalColocado, 'USD')}
+            {formatMoney(montoTotalColocado, 'GTQ')}
           </div>
           <div className="text-xs text-[var(--muted)] mt-1">
             Total vigente

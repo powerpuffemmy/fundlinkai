@@ -32,7 +32,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
   
   // Estados del formulario
   const [tipo, setTipo] = useState<TipoSubasta>('abierta')
-  const [moneda, setMoneda] = useState<Moneda>('USD')
+  const [moneda, setMoneda] = useState<Moneda>('GTQ')
   const [monto, setMonto] = useState('10000000')
   const [plazo, setPlazo] = useState('30')
   const [plazoPersonalizado, setPlazoPersonalizado] = useState('')
@@ -511,12 +511,12 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span className="text-[var(--muted)]">Límite:</span>
-                    <span className="font-semibold">{formatMoney(banco.limite_monto, 'USD')}</span>
+                    <span className="font-semibold">{formatMoney(banco.limite_monto, 'GTQ')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--muted)]">Disponible:</span>
                     <span className="font-semibold text-[var(--good)]">
-                      {formatMoney(banco.monto_disponible, 'USD')}
+                      {formatMoney(banco.monto_disponible, 'GTQ')}
                     </span>
                   </div>
                 </div>

@@ -170,7 +170,7 @@ export const WebAdminAprobaciones: React.FC = () => {
                 </div>
                 <div className="text-sm mt-2">
                   Bancos: {cliente.limites?.length || 0} | 
-                  Límites: {formatMoney(cliente.total_limites || 0, 'USD')}
+                  Límites: {formatMoney(cliente.total_limites || 0, 'GTQ')}
                 </div>
                 <Button
                   variant="primary"
@@ -199,7 +199,7 @@ export const WebAdminAprobaciones: React.FC = () => {
           <div className="space-y-1 mb-4">
             {clienteSeleccionado.limites?.map(l => (
               <div key={l.id} className="text-sm">
-                {l.banco?.entidad}: {formatMoney(l.limite_monto, 'USD')}
+                {l.banco?.entidad}: {formatMoney(l.limite_monto, 'GTQ')}
               </div>
             ))}
           </div>

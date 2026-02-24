@@ -191,7 +191,7 @@ export const WebAdminDashboard: React.FC = () => {
           <Card>
             <div className="text-sm text-[var(--muted)]">Volumen Total Colocado</div>
             <div className="text-3xl font-black mt-2">
-              {formatMoney(stats.volumenTotal, 'USD')}
+              {formatMoney(stats.volumenTotal, 'GTQ')}
             </div>
             <div className="text-xs text-[var(--muted)] mt-1">
               Todos los compromisos
@@ -200,7 +200,7 @@ export const WebAdminDashboard: React.FC = () => {
           <Card>
             <div className="text-sm text-[var(--muted)]">Volumen Vigente</div>
             <div className="text-3xl font-black mt-2 text-green-400">
-              {formatMoney(stats.volumenVigente, 'USD')}
+              {formatMoney(stats.volumenVigente, 'GTQ')}
             </div>
             <div className="text-xs text-[var(--muted)] mt-1">
               Compromisos activos

@@ -77,7 +77,7 @@ export const BancoCompromisos: React.FC = () => {
               misCompromisos
                 .filter(c => c.estado === 'vigente')
                 .reduce((sum, c) => sum + c.monto, 0),
-              'USD'
+              'GTQ'
             )}
           </div>
         </Card>
