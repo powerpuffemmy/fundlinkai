@@ -167,8 +167,7 @@ export const ClienteConfiguracion: React.FC = () => {
                   return (
                     <tr key={limite.id} className="border-b border-[var(--line)] hover:bg-white/5">
                       <td className="p-3">
-                        <div className="font-semibold text-sm">{limite.banco_entidad}</div>
-                        <div className="text-xs text-[var(--muted)]">{limite.banco_nombre}</div>
+                        <div className="font-semibold text-sm">{limite.banco_nombre}</div>
                       </td>
                       <td className="p-3">
                         {editando[limite.id] ? (
@@ -260,12 +259,11 @@ export const ClienteConfiguracion: React.FC = () => {
           <h3 className="font-bold text-lg mb-4">Agregar Bancos</h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
             {bancosSinLimite.map(banco => (
-              <div 
+              <div
                 key={banco.id}
                 className="p-3 bg-white/5 rounded-lg border border-blue-900/30"
               >
-                <div className="font-semibold text-sm mb-2">{banco.entidad}</div>
-                <div className="text-xs text-[var(--muted)] mb-3">{banco.nombre}</div>
+                <div className="font-semibold text-sm mb-3">{banco.nombre}</div>
                 <Button
                   variant="primary"
                   className="w-full text-xs"

@@ -172,18 +172,19 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
       if (!subasta) throw new Error('Error al crear subasta')
 
       // Insertar todos los usuarios de cada banco seleccionado en subasta_bancos
-      // (admin + mesa) para que todos puedan ver y ofertar en la subasta
+      // (admin + mesa) para que puedan ver y ofertar. Bancos sin usuarios se omiten.
       const bancosInvitados = Array.from(bancosSeleccionados).flatMap(banco_id => {
         const banco = bancosDisponibles.find(b => b.banco_id === banco_id)
-        const userIds = banco?.todos_user_ids ?? [banco_id]
+        const userIds = banco?.todos_user_ids ?? []
         return userIds.map(uid => ({ subasta_id: subasta.id, banco_id: uid }))
       })
 
-      const { error: errorBancos } = await supabase
-        .from('subasta_bancos')
-        .insert(bancosInvitados)
-
-      if (errorBancos) throw errorBancos
+      if (bancosInvitados.length > 0) {
+        const { error: errorBancos } = await supabase
+          .from('subasta_bancos')
+          .insert(bancosInvitados)
+        if (errorBancos) throw errorBancos
+      }
 
       // Log auditoría
       await supabase.rpc('log_auditoria', {
@@ -494,15 +495,17 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <div className="font-semibold">{banco.banco_entidad}</div>
-                    <div className="text-xs text-[var(--muted)]">{banco.banco_nombre}</div>
+                  <div className="flex-1 mr-2">
+                    <div className="font-semibold text-sm leading-tight">{banco.banco_nombre}</div>
+                    {banco.todos_user_ids.length === 0 && (
+                      <div className="text-xs text-yellow-400 mt-1">Sin representantes activos</div>
+                    )}
                   </div>
                   <input
                     type="checkbox"
                     checked={seleccionado}
                     onChange={() => {}} // Manejado por el onClick del div
-                    className="w-5 h-5"
+                    className="w-5 h-5 flex-shrink-0"
                   />
                 </div>
                 <div className="text-sm space-y-1">

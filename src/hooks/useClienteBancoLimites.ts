@@ -5,7 +5,6 @@ import { useAuthStore } from '@/store/authStore'
 
 interface BancoConLimite extends ClienteBancoLimite {
   banco_nombre?: string
-  banco_entidad?: string
 }
 
 interface BancoDisponible {
@@ -26,27 +25,13 @@ export const useClienteBancoLimites = () => {
   const fetchLimites = async () => {
     try {
       setLoading(true)
-      
       if (!user) return
-
+      // Usar RPC con SECURITY DEFINER para traer nombres del catálogo de bancos
+      // (el join directo a bancos falla por RLS para el rol cliente)
       const { data, error } = await supabase
-        .from('cliente_banco_limites')
-        .select(`
-          *,
-          banco:users!banco_id(nombre, entidad)
-        `)
-        .eq('cliente_id', user.id)
-        .order('created_at', { ascending: false })
-
+        .rpc('obtener_limites_cliente', { p_cliente_id: user.id })
       if (error) throw error
-
-      const limitesConBanco = (data || []).map(limite => ({
-        ...limite,
-        banco_nombre: limite.banco?.nombre,
-        banco_entidad: limite.banco?.entidad
-      }))
-
-      setLimites(limitesConBanco)
+      setLimites((data || []) as BancoConLimite[])
     } catch (error) {
       console.error('Error fetching limites:', error)
     } finally {

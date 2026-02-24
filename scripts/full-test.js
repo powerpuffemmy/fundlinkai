@@ -112,17 +112,17 @@ async function main() {
   console.log('\n📋 SECCIÓN 2: CLIENTE - CONFIGURACIÓN DE BANCOS');
 
   if (mariaAuth) {
-    // 2.1 obtener_todos_bancos
+    // 2.1 obtener_todos_bancos (catálogo completo de Guatemala: 19 bancos)
     const bancos = await rpc('obtener_todos_bancos', mariaAuth);
-    if (Array.isArray(bancos) && bancos.length === 5)
-      ok(`obtener_todos_bancos → ${bancos.length} bancos: ${bancos.map(b => b.entidad).join(', ')}`);
+    if (Array.isArray(bancos) && bancos.length === 19)
+      ok(`obtener_todos_bancos → ${bancos.length} bancos del catálogo guatemalteco`);
     else
-      fail('obtener_todos_bancos', JSON.stringify(bancos));
+      fail('obtener_todos_bancos', `esperado 19, recibido ${Array.isArray(bancos) ? bancos.length : 'error'}`);
 
-    // 2.2 Ver limites (10 = 5 bancos x 2 usuarios: admin + mesa)
+    // 2.2 Ver limites (5 bancos, 1 registro por banco desde catálogo)
     const limites = await rest('GET', `/cliente_banco_limites?cliente_id=eq.${MARIA_ID}&select=*`, mariaAuth);
-    if (Array.isArray(limites) && limites.length >= 5)
-      ok(`Ver limites → ${limites.length} registros (5 bancos x admin+mesa)`);
+    if (Array.isArray(limites) && limites.length === 5)
+      ok(`Ver limites → ${limites.length} bancos configurados`);
     else
       fail('Ver limites cliente', JSON.stringify(limites));
 
