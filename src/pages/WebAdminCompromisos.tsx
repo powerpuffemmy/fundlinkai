@@ -63,15 +63,22 @@ export const WebAdminCompromisos: React.FC = () => {
     }
   }
 
+  // Resolver nombre de banco (interno o externo)
+  const getBancoNombre = (c: CompromisoConRelaciones) => {
+    if (c.es_externo) return c.contraparte_nombre || 'Externo'
+    const banco = Array.isArray(c.banco) ? c.banco[0] : c.banco
+    return banco?.entidad || 'Desconocido'
+  }
+
   // Aplicar filtros del cliente
   const compromisosFiltrados = compromisos.filter(c => {
     const cliente = Array.isArray(c.cliente) ? c.cliente[0] : c.cliente
-    const banco = Array.isArray(c.banco) ? c.banco[0] : c.banco
+    const bancoNombre = getBancoNombre(c)
 
     if (filtroCliente && !cliente?.entidad.toLowerCase().includes(filtroCliente.toLowerCase())) {
       return false
     }
-    if (filtroBanco && !banco?.entidad.toLowerCase().includes(filtroBanco.toLowerCase())) {
+    if (filtroBanco && !bancoNombre.toLowerCase().includes(filtroBanco.toLowerCase())) {
       return false
     }
     if (filtroEstado !== 'todos' && c.estado !== filtroEstado) {
@@ -94,15 +101,15 @@ export const WebAdminCompromisos: React.FC = () => {
 
   // Calcular totales por banco
   const montoTotalPorBanco = compromisosFiltrados.reduce((acc, c) => {
-    const banco = Array.isArray(c.banco) ? c.banco[0] : c.banco
-    const key = banco?.entidad || 'Desconocido'
+    const key = getBancoNombre(c)
     if (!acc[key]) {
-      acc[key] = { monto: 0, cantidad: 0 }
+      acc[key] = { monto: 0, cantidad: 0, esExterno: false }
     }
     acc[key].monto += c.monto
     acc[key].cantidad += 1
+    if (c.es_externo) acc[key].esExterno = true
     return acc
-  }, {} as Record<string, { monto: number; cantidad: number }>)
+  }, {} as Record<string, { monto: number; cantidad: number; esExterno: boolean }>)
 
   const getEstadoBadge = (estado: string) => {
     const badges: Record<string, { class: string; label: string }> = {
@@ -281,8 +288,19 @@ export const WebAdminCompromisos: React.FC = () => {
                         <div className="text-xs text-[var(--muted)]">{cliente?.nombre}</div>
                       </td>
                       <td className="p-3">
-                        <div className="font-semibold">{banco?.entidad}</div>
-                        <div className="text-xs text-[var(--muted)]">{banco?.nombre}</div>
+                        {c.es_externo ? (
+                          <div>
+                            <div className="font-semibold">{c.contraparte_nombre}</div>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                              Externo
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-semibold">{banco?.entidad}</div>
+                            <div className="text-xs text-[var(--muted)]">{banco?.nombre}</div>
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 font-semibold">{formatMoney(c.monto, c.moneda)}</td>
                       <td className="p-3 text-[var(--good)]">{c.tasa}%</td>
@@ -345,7 +363,14 @@ export const WebAdminCompromisos: React.FC = () => {
               <div key={banco} className="p-3 bg-white/5 rounded border border-[var(--line)] hover:bg-white/10">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="font-semibold">{banco}</div>
+                    <div className="font-semibold">
+                      {banco}
+                      {data.esExterno && (
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                          Externo
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-[var(--muted)]">{data.cantidad} compromiso(s)</div>
                   </div>
                   <div className="text-right">

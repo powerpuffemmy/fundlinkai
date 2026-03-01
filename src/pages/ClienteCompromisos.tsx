@@ -2,11 +2,15 @@ import React, { useEffect, useState } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Skeleton, CardSkeleton, TableSkeleton } from '@/components/common/Skeleton'
+import { ConfirmModal, useConfirm } from '@/components/common/ConfirmModal'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDate } from '@/lib/utils'
 import { generarPDFCompromiso } from '@/lib/pdfGenerator'
 import { calcularVencimiento, getColorBgVencimiento, getIconoVencimiento } from '@/lib/vencimientoUtils'
+import { NuevoCompromisoExternoModal } from '@/components/cliente/NuevoCompromisoExternoModal'
+import { useCompromisos } from '@/hooks/useCompromisos'
+import toast from 'react-hot-toast'
 import type { Compromiso } from '@/types/database'
 
 interface CompromisoConBanco extends Compromiso {
@@ -14,49 +18,83 @@ interface CompromisoConBanco extends Compromiso {
   banco_entidad?: string
   cliente_nombre?: string
   cliente_entidad?: string
+  es_externo?: boolean
+  contraparte_nombre?: string
+  documento_url?: string
 }
+
+type FiltroTipo = 'todos' | 'fundlink' | 'externos'
 
 export const ClienteCompromisos: React.FC = () => {
   const { user } = useAuthStore()
+  const { eliminarCompromisoExterno } = useCompromisos()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [compromisos, setCompromisos] = useState<CompromisoConBanco[]>([])
+  const [showNuevoExterno, setShowNuevoExterno] = useState(false)
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
 
-  // Usar RPC con SECURITY DEFINER para obtener compromisos con datos de banco y cliente
-  // (el join directo a users falla por RLS para el rol cliente)
-  useEffect(() => {
-    const cargarCompromisos = async () => {
-      if (!user) return
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .rpc('obtener_compromisos_usuario', { p_user_id: user.id })
-        if (error) throw error
-        setCompromisos((data || []) as CompromisoConBanco[])
-      } catch (error) {
-        console.error('Error cargando compromisos:', error)
-      } finally {
-        setLoading(false)
-      }
+  const cargarCompromisos = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .rpc('obtener_compromisos_usuario', { p_user_id: user.id })
+      if (error) throw error
+      setCompromisos((data || []) as CompromisoConBanco[])
+    } catch (error) {
+      console.error('Error cargando compromisos:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     cargarCompromisos()
   }, [user?.id])
 
-  // ⭐ NUEVO: Filtrar compromisos próximos a vencer (< 15 días)
-  const compromisosProximosVencer = compromisos
+  // Filtrar por tipo
+  const compromisosFiltrados = compromisos.filter(c => {
+    if (filtroTipo === 'fundlink') return !c.es_externo
+    if (filtroTipo === 'externos') return c.es_externo
+    return true
+  })
+
+  // Compromisos próximos a vencer (< 15 días)
+  const compromisosProximosVencer = compromisosFiltrados
     .filter(c => c.estado === 'vigente')
     .map(c => ({ ...c, vencimiento: calcularVencimiento(c.fecha_vencimiento) }))
     .filter(c => c.vencimiento.diasRestantes <= 15 && c.vencimiento.diasRestantes >= 0)
     .sort((a, b) => a.vencimiento.diasRestantes - b.vencimiento.diasRestantes)
 
+  const handleEliminarExterno = (id: string) => {
+    confirm({
+      title: 'Eliminar Compromiso Externo',
+      message: 'Esta acción no se puede deshacer. ¿Seguro que deseas eliminar este compromiso?',
+      confirmText: 'Eliminar',
+      onConfirm: async () => {
+        try {
+          await eliminarCompromisoExterno(id)
+          toast.success('Compromiso externo eliminado')
+          cargarCompromisos()
+        } catch (error) {
+          toast.error('Error al eliminar el compromiso')
+        }
+      }
+    })
+  }
+
+  // Métricas
+  const totalCompromisos = compromisosFiltrados.length
+  const vigentes = compromisosFiltrados.filter(c => c.estado === 'vigente')
+  const totalVigentes = vigentes.length
+  const montoTotal = vigentes.reduce((sum, c) => sum + c.monto, 0)
+
   if (loading) {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Mis Compromisos</h2>
-        
-        {/* Loading skeletons para cards */}
         <CardSkeleton count={3} />
-        
-        {/* Loading skeleton para tabla */}
         <Card>
           <TableSkeleton rows={5} cols={9} />
         </Card>
@@ -66,34 +104,35 @@ export const ClienteCompromisos: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Mis Compromisos</h2>
+      {/* Header con botón */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-2xl font-bold">Mis Compromisos</h2>
+        <Button variant="primary" onClick={() => setShowNuevoExterno(true)}>
+          + Agregar Compromiso
+        </Button>
+      </div>
 
       {/* Cards de resumen */}
       <div className="grid md:grid-cols-3 gap-4">
         <Card>
           <div className="text-sm text-[var(--muted)]">Total Compromisos</div>
-          <div className="text-2xl font-black mt-1">{compromisos.length}</div>
+          <div className="text-2xl font-black mt-1">{totalCompromisos}</div>
         </Card>
         <Card>
           <div className="text-sm text-[var(--muted)]">Vigentes</div>
           <div className="text-2xl font-black mt-1 text-[var(--good)]">
-            {compromisos.filter(c => c.estado === 'vigente').length}
+            {totalVigentes}
           </div>
         </Card>
         <Card>
           <div className="text-sm text-[var(--muted)]">Monto Total</div>
           <div className="text-2xl font-black mt-1">
-            {formatMoney(
-              compromisos
-                .filter(c => c.estado === 'vigente')
-                .reduce((sum, c) => sum + c.monto, 0),
-              'GTQ'
-            )}
+            {formatMoney(montoTotal, 'GTQ')}
           </div>
         </Card>
       </div>
 
-      {/* ⭐ NUEVO: Alerta de compromisos próximos a vencer */}
+      {/* Alerta de compromisos próximos a vencer */}
       {compromisosProximosVencer.length > 0 && (
         <Card className="bg-red-900/10 border-red-900/50">
           <div className="flex items-start gap-3">
@@ -107,14 +146,21 @@ export const ClienteCompromisos: React.FC = () => {
               </p>
               <div className="space-y-2">
                 {compromisosProximosVencer.slice(0, 3).map(comp => (
-                  <div 
+                  <div
                     key={comp.id}
                     className="flex items-center justify-between p-3 bg-black/20 rounded border border-red-900/30"
                   >
                     <div className="flex-1">
-                      <div className="font-semibold text-sm">{comp.banco_entidad}</div>
+                      <div className="font-semibold text-sm">
+                        {comp.es_externo ? comp.contraparte_nombre : comp.banco_entidad}
+                        {comp.es_externo && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                            Externo
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-[var(--muted)]">
-                        {formatMoney(comp.monto, comp.moneda)} • OP-{comp.op_id}
+                        {formatMoney(comp.monto, comp.moneda)} • {comp.op_id}
                       </div>
                     </div>
                     <div className="text-right">
@@ -138,10 +184,31 @@ export const ClienteCompromisos: React.FC = () => {
         </Card>
       )}
 
-      {compromisos.length === 0 ? (
+      {/* Filtro por tipo */}
+      <div className="flex gap-2">
+        {(['todos', 'fundlink', 'externos'] as FiltroTipo[]).map(tipo => (
+          <button
+            key={tipo}
+            onClick={() => setFiltroTipo(tipo)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filtroTipo === tipo
+                ? 'bg-[var(--primary)] text-white'
+                : 'bg-white/5 text-[var(--muted)] hover:bg-white/10'
+            }`}
+          >
+            {tipo === 'todos' ? 'Todos' : tipo === 'fundlink' ? 'FundLink' : 'Externos'}
+          </button>
+        ))}
+      </div>
+
+      {compromisosFiltrados.length === 0 ? (
         <Card>
           <p className="text-[var(--muted)] text-center py-8">
-            No tienes compromisos vigentes.
+            {filtroTipo === 'externos'
+              ? 'No tienes compromisos externos registrados.'
+              : filtroTipo === 'fundlink'
+              ? 'No tienes compromisos FundLink.'
+              : 'No tienes compromisos vigentes.'}
           </p>
         </Card>
       ) : (
@@ -151,7 +218,7 @@ export const ClienteCompromisos: React.FC = () => {
               <thead>
                 <tr className="border-b border-[var(--line)]">
                   <th className="text-left p-3 text-sm text-[var(--muted)]">OP-ID</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Banco</th>
+                  <th className="text-left p-3 text-sm text-[var(--muted)]">Contraparte</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Monto</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Tasa</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Inicio</th>
@@ -162,7 +229,7 @@ export const ClienteCompromisos: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {compromisos.map(comp => {
+                {compromisosFiltrados.map(comp => {
                   const vencimientoInfo = calcularVencimiento(comp.fecha_vencimiento)
 
                   return (
@@ -171,8 +238,19 @@ export const ClienteCompromisos: React.FC = () => {
                         <span className="font-mono text-sm font-semibold">{comp.op_id}</span>
                       </td>
                       <td className="p-3">
-                        <div className="font-semibold text-sm">{comp.banco_entidad}</div>
-                        <div className="text-xs text-[var(--muted)]">{comp.banco_nombre}</div>
+                        {comp.es_externo ? (
+                          <div>
+                            <div className="font-semibold text-sm">{comp.contraparte_nombre}</div>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                              Externo
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-semibold text-sm">{comp.banco_entidad}</div>
+                            <div className="text-xs text-[var(--muted)]">{comp.banco_nombre}</div>
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 font-semibold">
                         {formatMoney(comp.monto, comp.moneda)}
@@ -183,7 +261,6 @@ export const ClienteCompromisos: React.FC = () => {
                       <td className="p-3 text-sm">{formatDate(comp.fecha_inicio)}</td>
                       <td className="p-3 text-sm">{formatDate(comp.fecha_vencimiento)}</td>
                       <td className="p-3">
-                        {/* ⭐ NUEVO: Badge con color según urgencia */}
                         <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold border ${vencimientoInfo.color} ${getColorBgVencimiento(vencimientoInfo.estado)}`}>
                           {getIconoVencimiento(vencimientoInfo.estado)} {vencimientoInfo.texto}
                         </span>
@@ -198,12 +275,30 @@ export const ClienteCompromisos: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3">
-                        <Button
-                          variant="small"
-                          onClick={() => generarPDFCompromiso(comp)}
-                        >
-                          Ver PDF
-                        </Button>
+                        <div className="flex gap-1">
+                          {comp.es_externo ? (
+                            <>
+                              {comp.documento_url && (
+                                <a href={comp.documento_url} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="small">Doc</Button>
+                                </a>
+                              )}
+                              <Button
+                                variant="small"
+                                onClick={() => handleEliminarExterno(comp.id)}
+                              >
+                                Eliminar
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="small"
+                              onClick={() => generarPDFCompromiso(comp)}
+                            >
+                              Ver PDF
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -213,6 +308,19 @@ export const ClienteCompromisos: React.FC = () => {
           </div>
         </Card>
       )}
+
+      {/* Modal nuevo compromiso externo */}
+      <NuevoCompromisoExternoModal
+        isOpen={showNuevoExterno}
+        onClose={() => setShowNuevoExterno(false)}
+        onSuccess={() => {
+          setShowNuevoExterno(false)
+          cargarCompromisos()
+        }}
+      />
+
+      {/* Modal de confirmación */}
+      <ConfirmDialog />
     </div>
   )
 }

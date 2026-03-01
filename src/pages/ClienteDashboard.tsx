@@ -17,6 +17,8 @@ interface CompromisoConBanco {
   fecha_vencimiento: string
   banco_nombre?: string
   banco_entidad?: string
+  es_externo?: boolean
+  contraparte_nombre?: string
 }
 
 export const ClienteDashboard: React.FC = () => {
@@ -44,11 +46,21 @@ export const ClienteDashboard: React.FC = () => {
 
         // Cargar datos de bancos
         const promesas = proximos.map(async (comp) => {
-          const { data: banco } = await supabase
-            .from('users')
-            .select('nombre, entidad')
-            .eq('id', comp.banco_id)
-            .single()
+          let banco_nombre: string | undefined
+          let banco_entidad: string | undefined
+
+          if (comp.es_externo) {
+            banco_nombre = comp.contraparte_nombre || 'Externo'
+            banco_entidad = comp.contraparte_nombre || 'Externo'
+          } else if (comp.banco_id) {
+            const { data: banco } = await supabase
+              .from('users')
+              .select('nombre, entidad')
+              .eq('id', comp.banco_id)
+              .single()
+            banco_nombre = banco?.nombre
+            banco_entidad = banco?.entidad
+          }
 
           return {
             id: comp.id,
@@ -57,8 +69,10 @@ export const ClienteDashboard: React.FC = () => {
             moneda: comp.moneda,
             tasa: comp.tasa,
             fecha_vencimiento: comp.fecha_vencimiento,
-            banco_nombre: banco?.nombre,
-            banco_entidad: banco?.entidad
+            banco_nombre,
+            banco_entidad,
+            es_externo: comp.es_externo,
+            contraparte_nombre: comp.contraparte_nombre,
           }
         })
 
@@ -158,9 +172,16 @@ export const ClienteDashboard: React.FC = () => {
                       className="flex items-center justify-between p-3 bg-black/20 rounded border border-red-900/30"
                     >
                       <div className="flex-1">
-                        <div className="font-semibold text-sm">{comp.banco_entidad}</div>
+                        <div className="font-semibold text-sm">
+                          {comp.banco_entidad}
+                          {comp.es_externo && (
+                            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                              Externo
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-[var(--muted)]">
-                          {formatMoney(comp.monto, comp.moneda)} al {comp.tasa}% • OP-{comp.op_id}
+                          {formatMoney(comp.monto, comp.moneda)} al {comp.tasa}% • {comp.op_id}
                         </div>
                       </div>
                       <div className="text-right">

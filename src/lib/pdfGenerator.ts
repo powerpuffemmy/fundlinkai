@@ -8,13 +8,18 @@ interface CompromisoConDetalles extends Compromiso {
 }
 
 export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
+  const esExterno = compromiso.es_externo === true
+  const tituloDoc = esExterno ? 'REGISTRO DE COMPROMISO EXTERNO' : 'CONTRATO DE COLOCACIÓN'
+  const bancoLabel = esExterno ? (compromiso.contraparte_nombre || 'Institución Externa') : (compromiso.banco_entidad || 'Banco')
+  const bancoRepresentante = esExterno ? '—' : (compromiso.banco_nombre || '—')
+
   const html = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contrato ${compromiso.op_id}</title>
+  <title>${esExterno ? 'Compromiso Externo' : 'Contrato'} ${compromiso.op_id}</title>
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -112,7 +117,7 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
   <div class="watermark">FUNDLinkAI</div>
 
   <div class="header">
-    <h1>CONTRATO DE COLOCACIÓN</h1>
+    <h1>${tituloDoc}</h1>
     <div class="op-id">${compromiso.op_id}</div>
   </div>
 
@@ -136,9 +141,9 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
         <th>Representante</th>
       </tr>
       <tr>
-        <td><strong>EL BANCO</strong></td>
-        <td>${compromiso.banco_entidad || 'Banco'}</td>
-        <td>${compromiso.banco_nombre || '—'}</td>
+        <td><strong>${esExterno ? 'LA CONTRAPARTE' : 'EL BANCO'}</strong></td>
+        <td>${bancoLabel}</td>
+        <td>${bancoRepresentante}</td>
       </tr>
       <tr>
         <td><strong>EL CLIENTE</strong></td>
@@ -234,7 +239,7 @@ export const generarPDFCompromiso = (compromiso: CompromisoConDetalles) => {
   <div class="signatures">
     <div class="signature-box">
       <div class="signature-line">
-        <strong>${compromiso.banco_entidad || 'EL BANCO'}</strong><br>
+        <strong>${bancoLabel}</strong><br>
         <small>Firma y Sello</small>
       </div>
     </div>

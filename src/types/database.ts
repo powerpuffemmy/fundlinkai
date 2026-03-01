@@ -87,7 +87,7 @@ export interface Compromiso {
   id: string
   op_id: string
   cliente_id: string
-  banco_id: string
+  banco_id: string | null
   subasta_id?: string
   oferta_id?: string
   monto: number
@@ -98,6 +98,9 @@ export interface Compromiso {
   fecha_vencimiento: string
   estado: EstadoCompromiso
   notas?: string
+  es_externo?: boolean
+  contraparte_nombre?: string
+  documento_url?: string
   created_at: string
   updated_at: string
 }
