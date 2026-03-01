@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
-import { Card } from '@/components/common/Card'
 import { useCompromisos } from '@/hooks/useCompromisos'
 import toast from 'react-hot-toast'
 import type { Moneda } from '@/types/database'
@@ -130,8 +129,8 @@ export const NuevoCompromisoExternoModal: React.FC<NuevoCompromisoExternoModalPr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#0f1623] border border-[var(--line)] rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
         <h3 className="text-xl font-bold mb-4">Registrar Compromiso Externo</h3>
         <p className="text-sm text-[var(--muted)] mb-4">
           Registra un compromiso con un banco o institución fuera de FundLink para monitorear todos tus compromisos en un solo lugar.
@@ -267,7 +266,7 @@ export const NuevoCompromisoExternoModal: React.FC<NuevoCompromisoExternoModalPr
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   )
 }
