@@ -7,7 +7,7 @@ import { useSubastas } from '@/hooks/useSubastas'
 import { useClienteBancoLimites } from '@/hooks/useClienteBancoLimites'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, formatDuracion, formatTipoSubasta } from '@/lib/utils'
 import { toastSuccess, toastError } from '@/lib/toastUtils'
 import type { TipoSubasta, Moneda } from '@/types/database'
 
@@ -29,34 +29,31 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
   const { user } = useAuthStore()
   const { crearSubasta } = useSubastas()
   const { obtenerBancosDisponibles } = useClienteBancoLimites()
-  
+
   // Estados del formulario
-  const [tipo, setTipo] = useState<TipoSubasta>('abierta')
+  const [tipo, setTipo] = useState<TipoSubasta>('rapida')
   const [moneda, setMoneda] = useState<Moneda>('GTQ')
   const [monto, setMonto] = useState('10000000')
   const [plazo, setPlazo] = useState('30')
   const [plazoPersonalizado, setPlazoPersonalizado] = useState('')
   const [usarPlazoPersonalizado, setUsarPlazoPersonalizado] = useState(false)
-  const [duracion, setDuracion] = useState('30')
+  const [duracion, setDuracion] = useState('30') // valor del select (minutos para rapida, días para programada)
   const [duracionPersonalizada, setDuracionPersonalizada] = useState('')
-  const [usarDuracionPersonalizada, setUsarDuracionPersonalizada] = useState(false)
   const [tasaObjetivo, setTasaObjetivo] = useState('')
-  
+
   // Estados del flujo
-  const [paso, setPaso] = useState<1 | 2>(1) // Paso 1: Formulario, Paso 2: Selección bancos
+  const [paso, setPaso] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
+
   // Estados para selección de bancos
   const [bancosDisponibles, setBancosDisponibles] = useState<BancoDisponible[]>([])
   const [bancosSeleccionados, setBancosSeleccionados] = useState<Set<string>>(new Set())
   const [subastaTemp, setSubastaTemp] = useState<any>(null)
 
   const tiposSubasta = [
-    { value: 'abierta', label: 'Mercado Abierto' },
-    { value: 'sellada', label: 'Sellada (1 ronda)' },
-    { value: 'holandesa', label: 'Holandesa' },
-    { value: 'multi', label: 'Multi-tramo' }
+    { value: 'rapida', label: 'Subasta Rápida' },
+    { value: 'programada', label: 'Subasta Programada' }
   ]
 
   const monedas = [
@@ -74,11 +71,62 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
     { value: '365', label: '365 días' }
   ]
 
-  const duraciones = [
+  // Duraciones dinámicas según tipo de subasta
+  const duracionesRapida = [
     { value: '15', label: '15 minutos' },
     { value: '30', label: '30 minutos' },
-    { value: '60', label: '60 minutos' }
+    { value: '60', label: '60 minutos' },
+    { value: 'custom', label: 'Personalizado' }
   ]
+
+  const duracionesProgramada = [
+    { value: '1', label: '1 día' },
+    { value: '2', label: '2 días' },
+    { value: '3', label: '3 días' },
+    { value: '5', label: '5 días' },
+    { value: 'custom', label: 'Personalizado' }
+  ]
+
+  const duracionesActuales = tipo === 'rapida' ? duracionesRapida : duracionesProgramada
+
+  // Cuando cambia el tipo, resetear duracion al primer valor válido
+  const handleTipoChange = (nuevoTipo: TipoSubasta) => {
+    setTipo(nuevoTipo)
+    setDuracionPersonalizada('')
+    if (nuevoTipo === 'rapida') {
+      setDuracion('30') // 30 minutos por defecto
+    } else {
+      setDuracion('1') // 1 día por defecto
+    }
+  }
+
+  // Calcular duracion final en minutos (siempre en minutos internamente)
+  const calcularDuracionMinutos = (): number => {
+    if (duracion === 'custom') {
+      const val = parseInt(duracionPersonalizada)
+      if (isNaN(val)) return 0
+      // Si es programada, el input personalizado es en días → convertir a minutos
+      return tipo === 'programada' ? val * 1440 : val
+    }
+    const val = parseInt(duracion)
+    if (isNaN(val)) return 0
+    // Si es programada, los valores del select son en días → convertir a minutos
+    return tipo === 'programada' ? val * 1440 : val
+  }
+
+  // Display de duración para el resumen
+  const getDuracionDisplay = (): string => {
+    if (duracion === 'custom') {
+      if (!duracionPersonalizada) return '—'
+      if (tipo === 'programada') {
+        const dias = parseInt(duracionPersonalizada)
+        return isNaN(dias) ? '—' : `${dias} día${dias !== 1 ? 's' : ''}`
+      }
+      return `${duracionPersonalizada} min`
+    }
+    const label = duracionesActuales.find(d => d.value === duracion)?.label
+    return label || '—'
+  }
 
   // PASO 1: Crear subasta (sin abrirla aún)
   const handleCrearSubasta = async (e: React.FormEvent) => {
@@ -95,7 +143,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
 
       const montoNum = parseFloat(monto)
       const plazoFinal = usarPlazoPersonalizado ? parseInt(plazoPersonalizado) : parseInt(plazo)
-      const duracionFinal = usarDuracionPersonalizada ? parseInt(duracionPersonalizada) : parseInt(duracion)
+      const duracionFinal = calcularDuracionMinutos() // siempre en minutos
 
       // Validaciones
       if (usarPlazoPersonalizado && (!plazoPersonalizado || plazoFinal < 1)) {
@@ -104,8 +152,16 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
         return
       }
 
-      if (usarDuracionPersonalizada && (!duracionPersonalizada || duracionFinal < 5)) {
-        setError('El tiempo de respuesta debe ser al menos 5 minutos')
+      if (duracionFinal < 5) {
+        setError(tipo === 'rapida'
+          ? 'El tiempo de respuesta debe ser al menos 5 minutos'
+          : 'El tiempo de respuesta debe ser al menos 1 día')
+        setLoading(false)
+        return
+      }
+
+      if (duracion === 'custom' && !duracionPersonalizada) {
+        setError('Ingresa un tiempo de respuesta personalizado')
         setLoading(false)
         return
       }
@@ -129,19 +185,19 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
         moneda: moneda as Moneda,
         monto: montoNum,
         plazo: plazoFinal,
-        duracion: duracionFinal,
+        duracion: duracionFinal, // siempre en minutos
         tasa_objetivo: tasaObjetivo ? parseFloat(tasaObjetivo) : null,
         tramos: [100],
-        estado: 'esperando', // Temporalmente en "esperando"
+        estado: 'esperando',
         aprobada: false,
         expires_at: expiresAt.toISOString()
       })
 
       setBancosDisponibles(bancos)
-      
+
       // Seleccionar todos por defecto
       setBancosSeleccionados(new Set(bancos.map(b => b.banco_id)))
-      
+
       // Pasar al paso 2
       setPaso(2)
 
@@ -172,7 +228,6 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
       if (!subasta) throw new Error('Error al crear subasta')
 
       // Insertar todos los usuarios de cada banco seleccionado en subasta_bancos
-      // (admin + mesa) para que puedan ver y ofertar. Bancos sin usuarios se omiten.
       const bancosInvitados = Array.from(bancosSeleccionados).flatMap(banco_id => {
         const banco = bancosDisponibles.find(b => b.banco_id === banco_id)
         const userIds = banco?.todos_user_ids ?? []
@@ -190,15 +245,16 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
       await supabase.rpc('log_auditoria', {
         p_user_id: user!.id,
         p_accion: 'Crear Subasta',
-        p_detalle: `Subasta abierta con ${bancosSeleccionados.size} banco(s) invitados`,
-        p_metadata: { 
+        p_detalle: `Subasta ${formatTipoSubasta(subastaTemp.tipo)} abierta con ${bancosSeleccionados.size} banco(s) invitados`,
+        p_metadata: {
           subasta_id: subasta.id,
           bancos_count: bancosSeleccionados.size
         }
       })
 
-      toastSuccess(`¡Subasta creada exitosamente! ${bancosSeleccionados.size} banco(s) invitados durante ${duracion} minutos.`, 4000)
-      
+      const duracionDisplay = formatDuracion(subastaTemp?.duracion || 30)
+      toastSuccess(`¡Subasta ${formatTipoSubasta(subastaTemp.tipo)} creada! ${bancosSeleccionados.size} banco(s) invitados. Tiempo de respuesta: ${duracionDisplay}.`, 4000)
+
       setTimeout(() => {
         if (onSubastaCreada) {
           onSubastaCreada()
@@ -254,14 +310,25 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <h3 className="font-bold mb-4">Crear Solicitud de Colocación</h3>
-            
+
             <form onSubmit={handleCrearSubasta} className="space-y-4">
               <Select
                 label="Tipo de Subasta"
                 options={tiposSubasta}
                 value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoSubasta)}
+                onChange={(e) => handleTipoChange(e.target.value as TipoSubasta)}
               />
+
+              {/* Indicador de tipo */}
+              <div className={`p-3 rounded border text-xs ${
+                tipo === 'rapida'
+                  ? 'bg-green-900/10 border-green-900/30 text-green-300'
+                  : 'bg-blue-900/10 border-blue-900/30 text-blue-300'
+              }`}>
+                {tipo === 'rapida'
+                  ? '⚡ Respuesta en minutos. Ideal para colocaciones urgentes.'
+                  : '📅 Respuesta en días. Ideal para colocaciones planificadas.'}
+              </div>
 
               <Select
                 label="Moneda"
@@ -321,41 +388,24 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
               )}
 
               <Select
-                label="Tiempo de Respuesta"
-                options={duraciones}
+                label={tipo === 'rapida' ? 'Tiempo de Respuesta (minutos)' : 'Tiempo de Respuesta (días)'}
+                options={duracionesActuales}
                 value={duracion}
                 onChange={(e) => {
                   setDuracion(e.target.value)
-                  setUsarDuracionPersonalizada(false)
+                  if (e.target.value !== 'custom') setDuracionPersonalizada('')
                 }}
-                disabled={usarDuracionPersonalizada}
               />
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="duracionPersonalizada"
-                  checked={usarDuracionPersonalizada}
-                  onChange={(e) => {
-                    setUsarDuracionPersonalizada(e.target.checked)
-                    if (!e.target.checked) setDuracionPersonalizada('')
-                  }}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="duracionPersonalizada" className="text-sm cursor-pointer">
-                  Tiempo personalizado (minutos)
-                </label>
-              </div>
-
-              {usarDuracionPersonalizada && (
+              {duracion === 'custom' && (
                 <Input
-                  label="Minutos para responder"
+                  label={tipo === 'rapida' ? 'Minutos para responder' : 'Días para responder'}
                   type="number"
                   value={duracionPersonalizada}
                   onChange={(e) => setDuracionPersonalizada(e.target.value)}
-                  min="5"
-                  max="10080"
-                  placeholder="Ej: 120"
+                  min={tipo === 'rapida' ? '5' : '1'}
+                  max={tipo === 'rapida' ? '1440' : '30'}
+                  placeholder={tipo === 'rapida' ? 'Ej: 120' : 'Ej: 7'}
                   required
                 />
               )}
@@ -375,9 +425,9 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                variant="primary" 
+              <Button
+                type="submit"
+                variant="primary"
                 className="w-full"
                 disabled={loading}
               >
@@ -391,7 +441,11 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-[var(--muted)]">Tipo:</span>
-                <span className="font-semibold">{tiposSubasta.find(t => t.value === tipo)?.label}</span>
+                <span className={`font-semibold px-2 py-0.5 rounded text-xs ${
+                  tipo === 'rapida' ? 'bg-green-900/20 text-green-300' : 'bg-blue-900/20 text-blue-300'
+                }`}>
+                  {formatTipoSubasta(tipo)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--muted)]">Moneda:</span>
@@ -412,7 +466,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
               <div className="flex justify-between">
                 <span className="text-[var(--muted)]">Tiempo de respuesta:</span>
                 <span className="font-semibold">
-                  {usarDuracionPersonalizada ? duracionPersonalizada : duracion} min
+                  {getDuracionDisplay()}
                 </span>
               </div>
               {tasaObjetivo && (
@@ -445,18 +499,26 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
       </div>
 
       <Card className="bg-blue-900/10 border-blue-900/50">
-        <div className="grid md:grid-cols-4 gap-4 text-sm">
+        <div className="grid md:grid-cols-5 gap-4 text-sm">
+          <div>
+            <div className="text-[var(--muted)]">Tipo</div>
+            <div className={`font-bold text-lg ${
+              subastaTemp?.tipo === 'rapida' ? 'text-green-400' : 'text-blue-400'
+            }`}>
+              {formatTipoSubasta(subastaTemp?.tipo || tipo)}
+            </div>
+          </div>
           <div>
             <div className="text-[var(--muted)]">Monto</div>
             <div className="font-bold text-lg">{formatMoney(subastaTemp?.monto || 0, moneda)}</div>
           </div>
           <div>
             <div className="text-[var(--muted)]">Plazo</div>
-            <div className="font-bold text-lg">{plazo} días</div>
+            <div className="font-bold text-lg">{subastaTemp?.plazo || plazo} días</div>
           </div>
           <div>
             <div className="text-[var(--muted)]">Duración</div>
-            <div className="font-bold text-lg">{duracion} min</div>
+            <div className="font-bold text-lg">{formatDuracion(subastaTemp?.duracion || 30)}</div>
           </div>
           <div>
             <div className="text-[var(--muted)]">Bancos Seleccionados</div>
@@ -504,7 +566,7 @@ export const NuevaSubasta: React.FC<NuevaSubastaProps> = ({ onSubastaCreada }) =
                   <input
                     type="checkbox"
                     checked={seleccionado}
-                    onChange={() => {}} // Manejado por el onClick del div
+                    onChange={() => {}}
                     className="w-5 h-5 flex-shrink-0"
                   />
                 </div>

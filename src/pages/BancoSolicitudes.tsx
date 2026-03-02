@@ -6,7 +6,7 @@ import { useSubastas } from '@/hooks/useSubastas'
 import { useOfertas } from '@/hooks/useOfertas'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
-import { formatMoney, formatDateTime } from '@/lib/utils'
+import { formatMoney, formatDateTime, formatTipoSubasta, formatDuracion } from '@/lib/utils'
 import type { Subasta } from '@/types/database'
 
 export const BancoSolicitudes: React.FC = () => {
@@ -175,7 +175,7 @@ export const BancoSolicitudes: React.FC = () => {
                 <div>
                   <div className="mb-4">
                     <h3 className="font-bold text-lg">
-                      {subasta.tipo.charAt(0).toUpperCase() + subasta.tipo.slice(1)}
+                      Subasta {formatTipoSubasta(subasta.tipo)}
                     </h3>
                     {/* Mostrar nombre del cliente */}
                     <div className="mt-2 p-2 bg-blue-900/20 border border-blue-900/50 rounded">
@@ -206,7 +206,7 @@ export const BancoSolicitudes: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[var(--muted)]">Duración:</span>
-                      <span className="font-semibold">{subasta.duracion} min</span>
+                      <span className="font-semibold">{formatDuracion(subasta.duracion)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[var(--muted)]">Creada:</span>

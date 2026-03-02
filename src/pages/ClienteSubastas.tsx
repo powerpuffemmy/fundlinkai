@@ -5,7 +5,7 @@ import { useSubastas } from '@/hooks/useSubastas'
 import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
-import { formatMoney, formatDateTime, addDays } from '@/lib/utils'
+import { formatMoney, formatDateTime, addDays, formatTipoSubasta } from '@/lib/utils'
 import { toastSuccess, toastError } from '@/lib/toastUtils'
 import { useConfirm } from '@/components/common/ConfirmModal'
 import type { Oferta } from '@/types/database'
@@ -24,7 +24,10 @@ export const ClienteSubastas: React.FC = () => {
   const [loadingOfertas, setLoadingOfertas] = useState(false)
   const [aprobando, setAprobando] = useState<Record<string, boolean>>({})
 
-  const misSubastas = subastas.filter(s => s.cliente?.entidad === user?.entidad)
+  const misSubastas = subastas.filter(s =>
+    s.cliente?.entidad === user?.entidad &&
+    !['cerrada', 'cancelada', 'expirada'].includes(s.estado)
+  )
 
   // Cargar ofertas para cada subasta
   useEffect(() => {
@@ -189,12 +192,12 @@ export const ClienteSubastas: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Mis Subastas y Ofertas</h2>
+      <h2 className="text-2xl font-bold">Subastas Abiertas</h2>
 
       {misSubastas.length === 0 ? (
         <Card>
           <p className="text-[var(--muted)] text-center py-8">
-            No has creado subastas aún.
+            No hay subastas abiertas en este momento.
           </p>
         </Card>
       ) : (
@@ -208,7 +211,7 @@ export const ClienteSubastas: React.FC = () => {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-bold text-lg">
-                      {subasta.tipo.charAt(0).toUpperCase() + subasta.tipo.slice(1)}
+                      Subasta {formatTipoSubasta(subasta.tipo)}
                     </h3>
                     <p className="text-sm text-[var(--muted)]">
                       Creada: {formatDateTime(subasta.created_at)}

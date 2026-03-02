@@ -51,10 +51,10 @@ export function validateDuracion(duracion: number): ValidationResult {
     return { valid: false, error: 'La duración debe ser un número válido' }
   }
   if (duracion < 1) {
-    return { valid: false, error: 'La duración mínima es 1 hora' }
+    return { valid: false, error: 'La duración mínima es 1 minuto' }
   }
-  if (duracion > 72) {
-    return { valid: false, error: 'La duración máxima es 72 horas' }
+  if (duracion > 43200) {
+    return { valid: false, error: 'La duración máxima es 30 días' }
   }
   return { valid: true }
 }
@@ -97,7 +97,7 @@ export function validateMoneda(moneda: string): ValidationResult {
 // VALIDACIONES DE TIPO SUBASTA
 // =====================
 
-const TIPOS_SUBASTA = ['abierta', 'sellada', 'holandesa', 'multi'] as const
+const TIPOS_SUBASTA = ['rapida', 'programada'] as const
 type TipoSubasta = typeof TIPOS_SUBASTA[number]
 
 export function validateTipoSubasta(tipo: string): ValidationResult {

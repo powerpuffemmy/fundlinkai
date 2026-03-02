@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Card } from '@/components/common/Card'
 import { supabase } from '@/lib/supabase'
-import { formatMoney, formatDateTime } from '@/lib/utils'
+import { formatMoney, formatDateTime, formatTipoSubasta } from '@/lib/utils'
 
 export const WebAdminSistema: React.FC = () => {
   const [stats, setStats] = useState({
@@ -143,7 +143,7 @@ export const WebAdminSistema: React.FC = () => {
               {subastas.map(s => (
                 <tr key={s.id} className="border-b border-[var(--line)] text-sm">
                   <td className="p-2">{s.cliente?.entidad || '—'}</td>
-                  <td className="p-2">{s.tipo}</td>
+                  <td className="p-2">{formatTipoSubasta(s.tipo)}</td>
                   <td className="p-2 font-semibold">{formatMoney(s.monto, s.moneda)}</td>
                   <td className="p-2">{s.plazo}d</td>
                   <td className="p-2">

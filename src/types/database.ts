@@ -1,6 +1,6 @@
 export type UserRole = 'cliente_admin' | 'cliente_usuario' | 'banco_admin' | 'banco_mesa' | 'banco_auditor' | 'webadmin'
 
-export type TipoSubasta = 'abierta' | 'sellada' | 'holandesa' | 'multi'
+export type TipoSubasta = 'rapida' | 'programada'
 
 export type Moneda = 'USD' | 'GTQ'
 

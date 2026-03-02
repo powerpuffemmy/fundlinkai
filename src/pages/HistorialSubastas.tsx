@@ -3,7 +3,7 @@ import { Card } from '@/components/common/Card'
 import { TableSkeleton } from '@/components/common/Skeleton'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-import { formatMoney, formatDateTime } from '@/lib/utils'
+import { formatMoney, formatDateTime, formatTipoSubasta, formatDuracion } from '@/lib/utils'
 import type { Subasta } from '@/types/database'
 
 export const HistorialSubastas: React.FC = () => {
@@ -25,7 +25,6 @@ export const HistorialSubastas: React.FC = () => {
       let query = supabase
         .from('subastas')
         .select('*')
-        .in('estado', ['cerrada', 'cancelada', 'expirada'])
         .order('created_at', { ascending: false })
 
       // Aplicar filtro de fecha
@@ -49,17 +48,19 @@ export const HistorialSubastas: React.FC = () => {
 
   const getEstadoBadge = (estado: string) => {
     const badges: Record<string, { class: string; label: string }> = {
-      cerrada: { class: 'bg-green-900/20 border-green-900/50 text-green-200', label: 'Cerrada' },
-      cancelada: { class: 'bg-gray-900/20 border-gray-900/50 text-gray-200', label: 'Cancelada' },
+      abierta: { class: 'bg-green-900/20 border-green-900/50 text-green-200', label: 'Abierta' },
+      esperando: { class: 'bg-blue-900/20 border-blue-900/50 text-blue-200', label: 'Esperando' },
+      cerrada: { class: 'bg-gray-900/20 border-gray-900/50 text-gray-200', label: 'Cerrada' },
+      cancelada: { class: 'bg-red-900/20 border-red-900/50 text-red-200', label: 'Cancelada' },
       expirada: { class: 'bg-yellow-900/20 border-yellow-900/50 text-yellow-200', label: 'Expirada' }
     }
-    return badges[estado] || badges.cerrada
+    return badges[estado] || badges.abierta
   }
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Historial de Subastas</h2>
+        <h2 className="text-2xl font-bold">Todas las Subastas</h2>
         <Card>
           <TableSkeleton rows={5} cols={7} />
         </Card>
@@ -70,7 +71,7 @@ export const HistorialSubastas: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Historial de Subastas</h2>
+        <h2 className="text-2xl font-bold">Todas las Subastas</h2>
         
         <div className="flex gap-2">
           <button
@@ -109,7 +110,7 @@ export const HistorialSubastas: React.FC = () => {
       {subastas.length === 0 ? (
         <Card>
           <p className="text-[var(--muted)] text-center py-8">
-            No hay subastas en el historial para el período seleccionado.
+            No hay subastas para el período seleccionado.
           </p>
         </Card>
       ) : (
@@ -134,7 +135,7 @@ export const HistorialSubastas: React.FC = () => {
                   return (
                     <tr key={subasta.id} className="border-b border-[var(--line)] hover:bg-white/5">
                       <td className="p-3">
-                        <span className="font-semibold capitalize">{subasta.tipo}</span>
+                        <span className="font-semibold">{formatTipoSubasta(subasta.tipo)}</span>
                       </td>
                       <td className="p-3 font-semibold">
                         {formatMoney(subasta.monto, subasta.moneda)}

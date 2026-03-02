@@ -2,24 +2,31 @@ import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
+import { LogoUploader } from '@/components/banco/LogoUploader'
 import { useClienteBancoLimites } from '@/hooks/useClienteBancoLimites'
 import { useAuthStore } from '@/store/authStore'
+import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/lib/utils'
 
 export const ClienteConfiguracion: React.FC = () => {
-  const { user } = useAuthStore()
-  const { 
-    limites, 
-    loading, 
-    crearLimite, 
+  const { user, setUser } = useAuthStore()
+  const {
+    limites,
+    loading,
+    crearLimite,
     actualizarLimite,
-    obtenerTodosBancos 
+    obtenerTodosBancos
   } = useClienteBancoLimites()
 
   const [bancosDisponibles, setBancosDisponibles] = useState<any[]>([])
   const [editando, setEditando] = useState<Record<string, boolean>>({})
   const [valoresTemp, setValoresTemp] = useState<Record<string, string>>({})
   const [guardando, setGuardando] = useState<Record<string, boolean>>({})
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(user?.logo_url)
+
+  useEffect(() => {
+    setLogoUrl(user?.logo_url)
+  }, [user?.logo_url])
 
   useEffect(() => {
     cargarBancos()
@@ -28,6 +35,26 @@ export const ClienteConfiguracion: React.FC = () => {
   const cargarBancos = async () => {
     const bancos = await obtenerTodosBancos()
     setBancosDisponibles(bancos)
+  }
+
+  const handleLogoUpdated = async (newUrl: string | null) => {
+    setLogoUrl(newUrl || undefined)
+
+    // Actualizar el usuario en el store
+    if (user) {
+      setUser({ ...user, logo_url: newUrl || undefined })
+    }
+
+    // Refrescar datos del usuario desde la BD
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user!.id)
+      .single()
+
+    if (data) {
+      setUser(data)
+    }
   }
 
   const bancosConLimite = limites.map(l => l.banco_id)
@@ -118,20 +145,46 @@ export const ClienteConfiguracion: React.FC = () => {
         </p>
       </div>
 
-      {/* Información del Cliente */}
-      <Card>
-        <h3 className="font-bold text-lg mb-4">Información de la Empresa</h3>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-[var(--muted)] mb-1">Entidad</label>
-            <div className="font-semibold">{user?.entidad}</div>
+      {/* Información del Cliente + Logo */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <h3 className="font-bold text-lg mb-4">Información de la Empresa</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm text-[var(--muted)] mb-1">Entidad</label>
+              <div className="font-semibold">{user?.entidad}</div>
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--muted)] mb-1">Email</label>
+              <div className="font-semibold">{user?.email}</div>
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--muted)] mb-1">Rol</label>
+              <div className="font-semibold capitalize">
+                {user?.role === 'cliente_admin' ? 'Administrador' : 'Usuario'}
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-[var(--muted)] mb-1">Email</label>
-            <div className="font-semibold">{user?.email}</div>
-          </div>
-        </div>
-      </Card>
+        </Card>
+
+        {/* Logo de la Empresa - Solo admin */}
+        {user?.role === 'cliente_admin' && (
+          <Card>
+            <h3 className="font-bold text-lg mb-4">Identidad Visual</h3>
+
+            <LogoUploader
+              currentLogoUrl={logoUrl}
+              onLogoUpdated={handleLogoUpdated}
+            />
+
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <p className="text-sm text-blue-400">
+                <strong>Tip:</strong> Tu logo aparecerá en el dashboard y en los compromisos de tu entidad.
+              </p>
+            </div>
+          </Card>
+        )}
+      </div>
 
       {/* Límites por Banco */}
       <Card>

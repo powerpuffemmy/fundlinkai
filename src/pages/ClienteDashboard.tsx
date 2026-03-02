@@ -122,8 +122,20 @@ export const ClienteDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Panel de Tesorería</h2>
-      
+      <div className="flex items-center gap-4">
+        {user?.logo_url && (
+          <img
+            src={user.logo_url}
+            alt={`Logo ${user.entidad}`}
+            className="h-12 w-12 object-contain rounded-lg bg-white/5 p-1"
+          />
+        )}
+        <div>
+          <h2 className="text-2xl font-bold">Panel de Tesorería</h2>
+          <p className="text-sm text-[var(--muted)]">{user?.entidad}</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <div className="text-sm text-[var(--muted)]">Compromisos Vigentes</div>

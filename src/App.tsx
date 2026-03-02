@@ -13,6 +13,7 @@ import { ClienteSubastas } from './pages/ClienteSubastas'
 import { HistorialSubastas } from './pages/HistorialSubastas'
 import { ClienteCompromisos } from './pages/ClienteCompromisos'
 import { ClienteConfiguracion } from './pages/ClienteConfiguracion'
+import { ClienteVencimientos } from './pages/ClienteVencimientos'
 import { ClienteOnboarding } from './pages/ClienteOnboarding'
 import { BancoSolicitudes } from './pages/BancoSolicitudes'
 import { BancoOfertas } from './pages/BancoOfertas'
@@ -27,7 +28,7 @@ import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { Button } from './components/common/Button'
 
-type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'configuracion'
+type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion'
 type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones'
 type Page = ClientePage | BancoPage | WebAdminPage
@@ -131,13 +132,19 @@ function App() {
           >
             Historial
           </Button>
-          <Button 
+          <Button
             variant={currentPage === 'compromisos' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('compromisos')}
           >
             Compromisos
           </Button>
-          <Button 
+          <Button
+            variant={currentPage === 'vencimientos' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('vencimientos')}
+          >
+            Vencimientos
+          </Button>
+          <Button
             variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('configuracion')}
           >
@@ -257,6 +264,8 @@ function App() {
           return <HistorialSubastas />
         case 'compromisos':
           return <ClienteCompromisos />
+        case 'vencimientos':
+          return <ClienteVencimientos />
         case 'configuracion':
           return <ClienteConfiguracion />
         default:

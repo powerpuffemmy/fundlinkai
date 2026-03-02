@@ -5,7 +5,7 @@ import { useCompromisos } from '@/hooks/useCompromisos'
 import { useOfertas } from '@/hooks/useOfertas'
 import { useSubastas } from '@/hooks/useSubastas'
 import { useAuthStore } from '@/store/authStore'
-import { formatMoney, formatDate, daysBetween } from '@/lib/utils'
+import { formatMoney, formatDate, daysBetween, formatTipoSubasta } from '@/lib/utils'
 
 interface BancoDashboardProps {
   onNavigate?: (page: 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion') => void
@@ -276,7 +276,7 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
                       <div className="text-xs text-[var(--muted)]">{subasta.cliente?.nombre}</div>
                     </div>
                     <span className="text-xs px-2 py-1 rounded bg-blue-900/20 text-blue-200">
-                      {subasta.tipo}
+                      {formatTipoSubasta(subasta.tipo)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
