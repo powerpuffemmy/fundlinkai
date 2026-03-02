@@ -40,12 +40,12 @@ serve(async (req) => {
     // Verificar rol usando id (no email) para evitar el bug de desync
     const { data: callerData } = await supabaseAdmin
       .from('users')
-      .select('role')
+      .select('role, entidad')
       .eq('id', user.id)
       .single()
 
-    if (callerData?.role !== 'webadmin') {
-      throw new Error('Solo webadmins pueden crear usuarios')
+    if (callerData?.role !== 'webadmin' && callerData?.role !== 'cliente_admin') {
+      throw new Error('No tienes permisos para crear usuarios')
     }
 
     // Obtener datos del body
@@ -53,6 +53,16 @@ serve(async (req) => {
 
     if (!email || !password || !nombre || !entidad || !role) {
       throw new Error('Faltan campos requeridos: email, password, nombre, entidad, role')
+    }
+
+    // cliente_admin solo puede crear cliente_usuario de su misma entidad
+    if (callerData?.role === 'cliente_admin') {
+      if (role !== 'cliente_usuario') {
+        throw new Error('Solo puedes crear usuarios con rol cliente_usuario')
+      }
+      if (entidad !== callerData.entidad) {
+        throw new Error('Solo puedes crear usuarios para tu propia entidad')
+      }
     }
 
     // Crear usuario en auth.users

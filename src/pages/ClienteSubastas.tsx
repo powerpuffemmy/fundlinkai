@@ -24,7 +24,7 @@ export const ClienteSubastas: React.FC = () => {
   const [loadingOfertas, setLoadingOfertas] = useState(false)
   const [aprobando, setAprobando] = useState<Record<string, boolean>>({})
 
-  const misSubastas = subastas.filter(s => s.cliente_id === user?.id)
+  const misSubastas = subastas.filter(s => s.cliente?.entidad === user?.entidad)
 
   // Cargar ofertas para cada subasta
   useEffect(() => {
@@ -278,23 +278,29 @@ export const ClienteSubastas: React.FC = () => {
                               </td>
                               <td className="p-2">
                                 {oferta.estado === 'enviada' && subasta.estado === 'abierta' && (
-                                  <div className="flex gap-2 justify-end">
-                                    <Button
-                                      variant="primary"
-                                      className="text-xs"
-                                      onClick={() => handleAprobar(subasta.id, oferta)}
-                                      disabled={aprobando[oferta.id]}
-                                    >
-                                      {aprobando[oferta.id] ? 'Aprobando...' : 'Aprobar'}
-                                    </Button>
-                                    <Button
-                                      variant="small"
-                                      className="text-xs"
-                                      onClick={() => handleRechazar(oferta.id)}
-                                    >
-                                      Rechazar
-                                    </Button>
-                                  </div>
+                                  user?.role === 'cliente_admin' ? (
+                                    <div className="flex gap-2 justify-end">
+                                      <Button
+                                        variant="primary"
+                                        className="text-xs"
+                                        onClick={() => handleAprobar(subasta.id, oferta)}
+                                        disabled={aprobando[oferta.id]}
+                                      >
+                                        {aprobando[oferta.id] ? 'Aprobando...' : 'Aprobar'}
+                                      </Button>
+                                      <Button
+                                        variant="small"
+                                        className="text-xs"
+                                        onClick={() => handleRechazar(oferta.id)}
+                                      >
+                                        Rechazar
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-[var(--muted)] italic">
+                                      Solo el administrador puede aprobar
+                                    </span>
+                                  )
                                 )}
                               </td>
                             </tr>

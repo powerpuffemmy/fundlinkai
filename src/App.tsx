@@ -76,7 +76,7 @@ function App() {
   }
 
   // Si es cliente y no ha completado onboarding, mostrar pantalla de configuración
-  if (user.role === 'cliente' && !user.onboarding_completado) {
+  if (user.role.startsWith('cliente') && !user.onboarding_completado) {
     return (
       <Layout>
         <ClienteOnboarding />
@@ -85,7 +85,7 @@ function App() {
   }
 
   // Si es cliente aprobado pero no activo, mostrar mensaje de espera
-  if (user.role === 'cliente' && user.onboarding_completado && !user.aprobado_por_admin) {
+  if (user.role.startsWith('cliente') && user.onboarding_completado && !user.aprobado_por_admin) {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto text-center py-12">
@@ -104,22 +104,22 @@ function App() {
   }
 
   const getNavigation = () => {
-    if (user.role === 'cliente') {
+    if (user.role.startsWith('cliente')) {
       return (
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <Button 
+          <Button
             variant={currentPage === 'dashboard' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('dashboard')}
           >
             Dashboard
           </Button>
-          <Button 
+          <Button
             variant={currentPage === 'nueva-subasta' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('nueva-subasta')}
           >
             Nueva Subasta
           </Button>
-          <Button 
+          <Button
             variant={currentPage === 'subastas' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('subastas')}
           >
@@ -247,7 +247,7 @@ function App() {
   }
 
   const getPage = () => {
-    if (user.role === 'cliente') {
+    if (user.role.startsWith('cliente')) {
       switch (currentPage) {
         case 'nueva-subasta':
           return <NuevaSubasta onSubastaCreada={() => setCurrentPage('subastas')} />

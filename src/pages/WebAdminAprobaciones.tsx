@@ -34,7 +34,7 @@ export const WebAdminAprobaciones: React.FC = () => {
       const { data: clientesData, error } = await supabase
         .from('users')
         .select('*')
-        .eq('role', 'cliente')
+        .in('role', ['cliente_admin', 'cliente_usuario'])
         .eq('onboarding_completado', true)
         .eq('aprobado_por_admin', false)
         .order('created_at', { ascending: false })

@@ -25,7 +25,6 @@ export const HistorialSubastas: React.FC = () => {
       let query = supabase
         .from('subastas')
         .select('*')
-        .eq('cliente_id', user.id)
         .in('estado', ['cerrada', 'cancelada', 'expirada'])
         .order('created_at', { ascending: false })
 

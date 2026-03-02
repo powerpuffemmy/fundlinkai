@@ -1,4 +1,4 @@
-export type UserRole = 'cliente' | 'banco_admin' | 'banco_mesa' | 'banco_auditor' | 'webadmin'
+export type UserRole = 'cliente_admin' | 'cliente_usuario' | 'banco_admin' | 'banco_mesa' | 'banco_auditor' | 'webadmin'
 
 export type TipoSubasta = 'abierta' | 'sellada' | 'holandesa' | 'multi'
 

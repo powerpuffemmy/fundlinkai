@@ -107,9 +107,11 @@ export const ClienteCompromisos: React.FC = () => {
       {/* Header con botón */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-2xl font-bold">Mis Compromisos</h2>
-        <Button variant="primary" onClick={() => setShowNuevoExterno(true)}>
-          + Agregar Compromiso
-        </Button>
+        {user?.role === 'cliente_admin' && (
+          <Button variant="primary" onClick={() => setShowNuevoExterno(true)}>
+            + Agregar Compromiso
+          </Button>
+        )}
       </div>
 
       {/* Cards de resumen */}
@@ -283,12 +285,14 @@ export const ClienteCompromisos: React.FC = () => {
                                   <Button variant="small">Doc</Button>
                                 </a>
                               )}
-                              <Button
-                                variant="small"
-                                onClick={() => handleEliminarExterno(comp.id)}
-                              >
-                                Eliminar
-                              </Button>
+                              {user?.role === 'cliente_admin' && (
+                                <Button
+                                  variant="small"
+                                  onClick={() => handleEliminarExterno(comp.id)}
+                                >
+                                  Eliminar
+                                </Button>
+                              )}
                             </>
                           ) : (
                             <Button

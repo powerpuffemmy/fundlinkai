@@ -21,11 +21,12 @@ export const WebAdminUsuarios: React.FC = () => {
   const [email, setEmail] = useState('')
   const [nombre, setNombre] = useState('')
   const [entidad, setEntidad] = useState('')
-  const [role, setRole] = useState<UserRole>('cliente')
+  const [role, setRole] = useState<UserRole>('cliente_admin')
   const [activo, setActivo] = useState(true)
 
   const roles = [
-    { value: 'cliente', label: 'Cliente' },
+    { value: 'cliente_admin', label: 'Cliente - Admin' },
+    { value: 'cliente_usuario', label: 'Cliente - Usuario' },
     { value: 'banco_admin', label: 'Banco - Admin' },
     { value: 'banco_mesa', label: 'Banco - Mesa' },
     { value: 'banco_auditor', label: 'Banco - Auditor' },
@@ -57,7 +58,7 @@ export const WebAdminUsuarios: React.FC = () => {
     setEmail('')
     setNombre('')
     setEntidad('')
-    setRole('cliente')
+    setRole('cliente_admin')
     setActivo(true)
     setEditando(null)
     setMostrarFormulario(false)
@@ -398,7 +399,7 @@ export const WebAdminUsuarios: React.FC = () => {
         <Card>
           <div className="text-sm text-[var(--muted)]">Clientes</div>
           <div className="text-2xl font-black mt-1">
-            {usuarios.filter(u => u.role === 'cliente').length}
+            {usuarios.filter(u => u.role.startsWith('cliente')).length}
           </div>
         </Card>
         <Card>

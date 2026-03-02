@@ -86,7 +86,7 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
           </Button>
         </div>
 
-        {role === 'cliente' && (
+        {role.startsWith('cliente') && (
           <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-900/50 rounded-lg">
             <p className="text-sm text-yellow-200">
               💡 El cliente deberá completar su configuración al hacer login por primera vez.

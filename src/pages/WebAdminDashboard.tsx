@@ -37,7 +37,7 @@ export const WebAdminDashboard: React.FC = () => {
 
       const totalUsuarios = usuarios?.length || 0
       const usuariosActivos = usuarios?.filter(u => u.activo).length || 0
-      const totalClientes = usuarios?.filter(u => u.role === 'cliente').length || 0
+      const totalClientes = usuarios?.filter(u => u.role.startsWith('cliente')).length || 0
       const totalBancos = usuarios?.filter(u => u.role.startsWith('banco')).length || 0
 
       // Subastas

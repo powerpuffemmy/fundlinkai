@@ -27,7 +27,7 @@ export const ClienteDashboard: React.FC = () => {
   const [compromisosProximos, setCompromisosProximos] = useState<CompromisoConBanco[]>([])
   const [loading, setLoading] = useState(true)
 
-  const misCompromisos = comprimisosBase.filter(c => c.cliente_id === user?.id && c.estado === 'vigente')
+  const misCompromisos = comprimisosBase.filter(c => c.estado === 'vigente')
 
   // Cargar compromisos próximos a vencer
   useEffect(() => {

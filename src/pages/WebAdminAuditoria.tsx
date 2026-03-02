@@ -28,7 +28,8 @@ export const WebAdminAuditoria: React.FC = () => {
 
   const roles = [
     { value: '', label: 'Todos los roles' },
-    { value: 'cliente', label: 'Cliente' },
+    { value: 'cliente_admin', label: 'Cliente Admin' },
+    { value: 'cliente_usuario', label: 'Cliente Usuario' },
     { value: 'banco_admin', label: 'Banco Admin' },
     { value: 'banco_mesa', label: 'Banco Mesa' },
     { value: 'banco_auditor', label: 'Banco Auditor' },

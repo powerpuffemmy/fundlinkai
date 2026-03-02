@@ -201,48 +201,60 @@ export const ClienteConfiguracion: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3">
-                        <button
-                          onClick={() => handleToggleActivo(limite.id, limite.activo)}
-                          className={`text-xs px-2 py-1 rounded ${
-                            limite.activo 
-                              ? 'bg-green-900/20 text-green-200' 
+                        {user?.role === 'cliente_admin' ? (
+                          <button
+                            onClick={() => handleToggleActivo(limite.id, limite.activo)}
+                            className={`text-xs px-2 py-1 rounded ${
+                              limite.activo
+                                ? 'bg-green-900/20 text-green-200'
+                                : 'bg-gray-900/20 text-gray-200'
+                            }`}
+                          >
+                            {limite.activo ? 'Activo' : 'Inactivo'}
+                          </button>
+                        ) : (
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            limite.activo
+                              ? 'bg-green-900/20 text-green-200'
                               : 'bg-gray-900/20 text-gray-200'
-                          }`}
-                        >
-                          {limite.activo ? 'Activo' : 'Inactivo'}
-                        </button>
+                          }`}>
+                            {limite.activo ? 'Activo' : 'Inactivo'}
+                          </span>
+                        )}
                       </td>
                       <td className="p-3">
-                        <div className="flex gap-2 justify-end">
-                          {editando[limite.id] ? (
-                            <>
-                              <Button
-                                variant="primary"
-                                className="text-xs"
-                                onClick={() => handleGuardarLimite(limite.id)}
-                                disabled={guardando[limite.id]}
-                              >
-                                {guardando[limite.id] ? 'Guardando...' : 'Guardar'}
-                              </Button>
+                        {user?.role === 'cliente_admin' && (
+                          <div className="flex gap-2 justify-end">
+                            {editando[limite.id] ? (
+                              <>
+                                <Button
+                                  variant="primary"
+                                  className="text-xs"
+                                  onClick={() => handleGuardarLimite(limite.id)}
+                                  disabled={guardando[limite.id]}
+                                >
+                                  {guardando[limite.id] ? 'Guardando...' : 'Guardar'}
+                                </Button>
+                                <Button
+                                  variant="small"
+                                  className="text-xs"
+                                  onClick={() => handleCancelarEdicion(limite.id)}
+                                  disabled={guardando[limite.id]}
+                                >
+                                  Cancelar
+                                </Button>
+                              </>
+                            ) : (
                               <Button
                                 variant="small"
                                 className="text-xs"
-                                onClick={() => handleCancelarEdicion(limite.id)}
-                                disabled={guardando[limite.id]}
+                                onClick={() => handleIniciarEdicion(limite.id, limite.limite_monto)}
                               >
-                                Cancelar
+                                Editar
                               </Button>
-                            </>
-                          ) : (
-                            <Button
-                              variant="small"
-                              className="text-xs"
-                              onClick={() => handleIniciarEdicion(limite.id, limite.limite_monto)}
-                            >
-                              Editar
-                            </Button>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )
@@ -253,8 +265,8 @@ export const ClienteConfiguracion: React.FC = () => {
         )}
       </Card>
 
-      {/* Agregar Nuevos Bancos */}
-      {bancosSinLimite.length > 0 && (
+      {/* Agregar Nuevos Bancos - Solo admin */}
+      {user?.role === 'cliente_admin' && bancosSinLimite.length > 0 && (
         <Card>
           <h3 className="font-bold text-lg mb-4">Agregar Bancos</h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
