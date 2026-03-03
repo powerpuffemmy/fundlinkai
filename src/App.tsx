@@ -45,6 +45,17 @@ function App() {
     initialize()
   }, [])
 
+  // Soporte de URL para verificación QR: ?verify=<id> navega a compromisos
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('verify') || params.get('verify-sol') || params.get('verify-oferta')) {
+      // Limpiar la URL sin recargar
+      window.history.replaceState({}, '', window.location.pathname)
+      // Navegar a compromisos al estar autenticado
+      if (user) setCurrentPage('compromisos')
+    }
+  }, [user])
+
   useEffect(() => {
     // Si es primer login, mostrar modal para cambiar contraseña
     if (user && user.primer_login) {

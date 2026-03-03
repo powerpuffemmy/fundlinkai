@@ -210,7 +210,8 @@ export const useSolicitudesColocacion = () => {
           plazo: solicitud.plazo,
           fecha_inicio: fechaInicio.toISOString(),
           fecha_vencimiento: fechaVencimiento.toISOString(),
-          estado: 'vigente',
+          estado: 'confirmado',
+          fecha_confirmacion: new Date().toISOString(),
           notas: `Colocación directa. Solicitud: ${solicitud.id}`
         }])
       if (e4) throw e4

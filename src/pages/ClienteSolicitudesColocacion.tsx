@@ -5,6 +5,8 @@ import { useSolicitudesColocacion } from '@/hooks/useSolicitudesColocacion'
 import { formatMoney } from '@/lib/utils'
 import { toastSuccess, toastError } from '@/lib/toastUtils'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
+import { generarPDFSolicitudColocacion, generarPDFOfertaColocacion } from '@/lib/pdfGenerator'
+import { useAuthStore } from '@/store/authStore'
 import type { SolicitudColocacion, OfertaColocacion } from '@/types/database'
 
 interface ClienteSolicitudesColocacionProps {
@@ -44,6 +46,7 @@ const ofertaBadge = (estado: string) => {
 }
 
 export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacionProps> = ({ onNueva }) => {
+  const { user } = useAuthStore()
   const { solicitudes, loading, cerrarSolicitud, aceptarOferta, rechazarOferta } = useSolicitudesColocacion()
   const [expandido, setExpandido] = useState<string | null>(null)
   const [confirmCerrar, setConfirmCerrar] = useState<string | null>(null)
@@ -172,6 +175,29 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-3">
+                    {/* PDF Solicitud */}
+                    <Button
+                      variant="small"
+                      className="text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        generarPDFSolicitudColocacion({
+                          id: sol.id,
+                          cliente_nombre: user?.nombre,
+                          cliente_entidad: user?.entidad,
+                          moneda: sol.moneda,
+                          monto: sol.monto,
+                          plazo: sol.plazo,
+                          tasa_objetivo: sol.tasa_objetivo,
+                          tipo_tasa: sol.tipo_tasa,
+                          fecha_cierre: sol.fecha_cierre,
+                          notas: sol.notas,
+                          created_at: sol.created_at,
+                        })
+                      }}
+                    >
+                      PDF Sol.
+                    </Button>
                     {abierta && (
                       <Button
                         variant="small"
@@ -226,8 +252,29 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
                               {oferta.notas && (
                                 <p className="text-xs text-[var(--muted)] mt-1">"{oferta.notas}"</p>
                               )}
-                              <div className="text-xs text-[var(--muted)] mt-1">
-                                {new Date(oferta.created_at).toLocaleString('es-GT')}
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className="text-xs text-[var(--muted)]">
+                                  {new Date(oferta.created_at).toLocaleString('es-GT')}
+                                </span>
+                                <Button
+                                  variant="small"
+                                  className="text-xs py-0.5 px-2"
+                                  onClick={() => generarPDFOfertaColocacion({
+                                    id: oferta.id,
+                                    tasa: oferta.tasa,
+                                    monto: oferta.monto,
+                                    notas: oferta.notas,
+                                    created_at: oferta.created_at,
+                                    banco_nombre: (oferta as any).banco?.nombre,
+                                    banco_entidad: (oferta as any).banco?.entidad || (oferta as any).banco?.nombre,
+                                    cliente_nombre: user?.nombre,
+                                    cliente_entidad: user?.entidad,
+                                    solicitud_plazo: sol.plazo,
+                                    solicitud_moneda: sol.moneda,
+                                  })}
+                                >
+                                  PDF Oferta
+                                </Button>
                               </div>
                             </div>
                             {oferta.estado === 'enviada' && abierta && (

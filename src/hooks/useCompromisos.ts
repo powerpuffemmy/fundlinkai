@@ -58,9 +58,16 @@ export const useCompromisos = () => {
     try {
       if (!user) throw new Error('Usuario no autenticado')
 
+      // Nuevos compromisos inician como 'confirmado' con fecha_confirmacion
+      const payload = {
+        ...compromiso,
+        estado: 'confirmado' as const,
+        fecha_confirmacion: new Date().toISOString(),
+      }
+
       const { data, error } = await supabase
         .from('compromisos')
-        .insert([compromiso])
+        .insert([payload])
         .select(`
           *,
           banco:users!banco_id(nombre, entidad, logo_url),
@@ -74,7 +81,7 @@ export const useCompromisos = () => {
       await supabase.rpc('log_auditoria', {
         p_user_id: user.id,
         p_accion: 'Crear Compromiso',
-        p_detalle: `Compromiso ${data.op_id} por ${compromiso.monto} ${compromiso.moneda}`,
+        p_detalle: `Compromiso ${data.op_id} por ${compromiso.monto} ${compromiso.moneda} — CONFIRMADO`,
         p_metadata: { compromiso_id: data.id }
       })
 
@@ -82,6 +89,35 @@ export const useCompromisos = () => {
       return data
     } catch (error) {
       console.error('Error creating compromiso:', error)
+      throw error
+    }
+  }
+
+  const ejecutarCompromiso = async (id: string) => {
+    try {
+      if (!user) throw new Error('Usuario no autenticado')
+
+      const { error } = await supabase
+        .from('compromisos')
+        .update({
+          estado: 'ejecutado',
+          fecha_ejecucion: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      await supabase.rpc('log_auditoria', {
+        p_user_id: user.id,
+        p_accion: 'Ejecutar Compromiso',
+        p_detalle: `Compromiso ${id} marcado como EJECUTADO — desembolso confirmado`,
+        p_metadata: { compromiso_id: id }
+      })
+
+      await fetchCompromisos()
+    } catch (error) {
+      console.error('Error executing compromiso:', error)
       throw error
     }
   }
@@ -229,6 +265,7 @@ export const useCompromisos = () => {
     compromisos,
     loading,
     crearCompromiso,
+    ejecutarCompromiso,
     crearCompromisoExterno,
     actualizarCompromisoExterno,
     eliminarCompromisoExterno,

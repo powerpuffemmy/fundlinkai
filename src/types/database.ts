@@ -10,7 +10,7 @@ export type EstadoOferta = 'enviada' | 'aprobada' | 'rechazada' | 'adjudicada'
 
 export type EstadoPush = 'vigente' | 'aceptada' | 'rechazada' | 'expirada'
 
-export type EstadoCompromiso = 'vigente' | 'vencido' | 'renovado' | 'cancelado'
+export type EstadoCompromiso = 'confirmado' | 'ejecutado' | 'vigente' | 'vencido' | 'renovado' | 'cancelado'
 
 export type TipoDocumentoKYC = 'cedula' | 'rtu' | 'patente' | 'estados_financieros' | 'otro'
 
@@ -100,6 +100,8 @@ export interface Compromiso {
   plazo: number
   fecha_inicio: string
   fecha_vencimiento: string
+  fecha_confirmacion?: string | null
+  fecha_ejecucion?: string | null
   estado: EstadoCompromiso
   notas?: string
   es_externo?: boolean

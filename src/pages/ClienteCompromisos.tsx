@@ -6,7 +6,7 @@ import { ConfirmModal, useConfirm } from '@/components/common/ConfirmModal'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDate } from '@/lib/utils'
-import { generarPDFCompromiso } from '@/lib/pdfGenerator'
+import { generarPDFContrato, generarPDFEjecutado } from '@/lib/pdfGenerator'
 import { calcularVencimiento, getColorBgVencimiento, getIconoVencimiento } from '@/lib/vencimientoUtils'
 import { NuevoCompromisoExternoModal } from '@/components/cliente/NuevoCompromisoExternoModal'
 import { useCompromisos } from '@/hooks/useCompromisos'
@@ -62,7 +62,7 @@ export const ClienteCompromisos: React.FC = () => {
 
   // Compromisos próximos a vencer (< 15 días)
   const compromisosProximosVencer = compromisosFiltrados
-    .filter(c => c.estado === 'vigente')
+    .filter(c => ['vigente', 'ejecutado'].includes(c.estado))
     .map(c => ({ ...c, vencimiento: calcularVencimiento(c.fecha_vencimiento) }))
     .filter(c => c.vencimiento.diasRestantes <= 15 && c.vencimiento.diasRestantes >= 0)
     .sort((a, b) => a.vencimiento.diasRestantes - b.vencimiento.diasRestantes)
@@ -86,9 +86,9 @@ export const ClienteCompromisos: React.FC = () => {
 
   // Métricas
   const totalCompromisos = compromisosFiltrados.length
-  const vigentes = compromisosFiltrados.filter(c => c.estado === 'vigente')
-  const totalVigentes = vigentes.length
-  const montoTotal = vigentes.reduce((sum, c) => sum + c.monto, 0)
+  const activos = compromisosFiltrados.filter(c => ['vigente', 'ejecutado', 'confirmado'].includes(c.estado))
+  const totalVigentes = activos.length
+  const montoTotal = activos.reduce((sum, c) => sum + c.monto, 0)
 
   if (loading) {
     return (
@@ -268,16 +268,32 @@ export const ClienteCompromisos: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          comp.estado === 'vigente' ? 'bg-green-900/20 text-green-200' :
-                          comp.estado === 'vencido' ? 'bg-red-900/20 text-red-200' :
-                          'bg-gray-900/20 text-gray-200'
-                        }`}>
-                          {comp.estado}
-                        </span>
+                        {(() => {
+                          const cls: Record<string, string> = {
+                            confirmado: 'bg-blue-900/30 text-blue-300',
+                            ejecutado:  'bg-green-900/30 text-green-300',
+                            vigente:    'bg-green-900/20 text-green-200',
+                            vencido:    'bg-red-900/20 text-red-200',
+                            renovado:   'bg-yellow-900/20 text-yellow-200',
+                            cancelado:  'bg-gray-900/20 text-gray-400',
+                          }
+                          const labels: Record<string, string> = {
+                            confirmado: 'Confirmado',
+                            ejecutado:  'Ejecutado',
+                            vigente:    'Vigente',
+                            vencido:    'Vencido',
+                            renovado:   'Renovado',
+                            cancelado:  'Cancelado',
+                          }
+                          return (
+                            <span className={`text-xs px-2 py-1 rounded font-semibold ${cls[comp.estado] || 'bg-white/10 text-white'}`}>
+                              {labels[comp.estado] || comp.estado}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="p-3">
-                        <div className="flex gap-1">
+                        <div className="flex flex-col gap-1">
                           {comp.es_externo ? (
                             <>
                               {comp.documento_url && (
@@ -295,12 +311,34 @@ export const ClienteCompromisos: React.FC = () => {
                               )}
                             </>
                           ) : (
-                            <Button
-                              variant="small"
-                              onClick={() => generarPDFCompromiso(comp)}
-                            >
-                              Ver PDF
-                            </Button>
+                            <>
+                              <Button
+                                variant="small"
+                                onClick={() => generarPDFContrato({
+                                  ...comp,
+                                  banco_nombre: comp.banco_nombre,
+                                  banco_entidad: comp.banco_entidad,
+                                  cliente_nombre: comp.cliente_nombre,
+                                  cliente_entidad: comp.cliente_entidad,
+                                })}
+                              >
+                                PDF Contrato
+                              </Button>
+                              {(comp.estado === 'ejecutado' || comp.estado === 'vigente') && (
+                                <Button
+                                  variant="small"
+                                  onClick={() => generarPDFEjecutado({
+                                    ...comp,
+                                    banco_nombre: comp.banco_nombre,
+                                    banco_entidad: comp.banco_entidad,
+                                    cliente_nombre: comp.cliente_nombre,
+                                    cliente_entidad: comp.cliente_entidad,
+                                  })}
+                                >
+                                  PDF Ejecutado
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>

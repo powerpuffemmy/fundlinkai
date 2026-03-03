@@ -1,22 +1,36 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { useCompromisos } from '@/hooks/useCompromisos'
 import { useAuthStore } from '@/store/authStore'
 import { formatMoney, formatDate, daysBetween } from '@/lib/utils'
-import { generarPDFCompromiso } from '@/lib/pdfGenerator'
+import { generarPDFContrato, generarPDFEjecutado } from '@/lib/pdfGenerator'
+import { toastSuccess, toastError } from '@/lib/toastUtils'
+
+const estadoBadge = (estado: string) => {
+  const map: Record<string, { cls: string; label: string }> = {
+    confirmado: { cls: 'bg-blue-900/30 text-blue-300 border border-blue-900/50',   label: 'Confirmado' },
+    ejecutado:  { cls: 'bg-green-900/30 text-green-300 border border-green-900/50', label: 'Ejecutado' },
+    vigente:    { cls: 'bg-green-900/20 text-green-200',                             label: 'Vigente' },
+    vencido:    { cls: 'bg-red-900/20 text-red-200',                                 label: 'Vencido' },
+    renovado:   { cls: 'bg-yellow-900/20 text-yellow-200',                           label: 'Renovado' },
+    cancelado:  { cls: 'bg-gray-900/20 text-gray-400',                               label: 'Cancelado' },
+  }
+  const { cls, label } = map[estado] || { cls: 'bg-white/10 text-white', label: estado }
+  return <span className={`text-xs px-2 py-1 rounded font-semibold ${cls}`}>{label}</span>
+}
 
 export const BancoCompromisos: React.FC = () => {
   const { user } = useAuthStore()
-  const { compromisos, loading } = useCompromisos()
+  const { compromisos, loading, ejecutarCompromiso } = useCompromisos()
+  const [ejecutando, setEjecutando] = useState<string | null>(null)
+  const [generandoPDF, setGenerandoPDF] = useState<string | null>(null)
 
-  // Filtrar solo los compromisos del banco actual
   const misCompromisos = compromisos.filter(c => c.banco_id === user?.id)
 
   const getDiasRestantes = (fechaVencimiento: string) => {
     const hoy = new Date().toISOString().split('T')[0]
-    const dias = daysBetween(hoy, fechaVencimiento)
-    return dias
+    return daysBetween(hoy, fechaVencimiento)
   }
 
   const getAlertClass = (dias: number) => {
@@ -25,58 +39,187 @@ export const BancoCompromisos: React.FC = () => {
     return 'text-[var(--good)]'
   }
 
-  const handleGenerarPDF = (comp: any) => {
-    // Mapear los datos para el PDF con la estructura correcta
-    const compromisoParaPDF = {
-      ...comp,
-      banco_nombre: comp.banco?.nombre,
-      banco_entidad: comp.banco?.entidad,
-      banco_logo_url: comp.banco?.logo_url,  // Logo del banco
-      cliente_nombre: comp.cliente?.nombre,
-      cliente_entidad: comp.cliente?.entidad,
-    }
-    
-    generarPDFCompromiso(compromisoParaPDF)
+  const mapParaPDF = (comp: any) => ({
+    ...comp,
+    banco_nombre: comp.banco?.nombre,
+    banco_entidad: comp.banco?.entidad,
+    cliente_nombre: comp.cliente?.nombre,
+    cliente_entidad: comp.cliente?.entidad,
+  })
+
+  const handleContrato = async (comp: any) => {
+    setGenerandoPDF(comp.id + '-contrato')
+    await generarPDFContrato(mapParaPDF(comp))
+    setGenerandoPDF(null)
   }
+
+  const handleEjecutado = async (comp: any) => {
+    setGenerandoPDF(comp.id + '-ejecutado')
+    await generarPDFEjecutado(mapParaPDF(comp))
+    setGenerandoPDF(null)
+  }
+
+  const handleEjecutar = async (comp: any) => {
+    if (!confirm(`¿Confirmas que el cliente realizó el desembolso del compromiso ${comp.op_id}?`)) return
+    try {
+      setEjecutando(comp.id)
+      await ejecutarCompromiso(comp.id)
+      toastSuccess(`Compromiso ${comp.op_id} marcado como EJECUTADO`)
+    } catch {
+      toastError('Error al ejecutar el compromiso')
+    } finally {
+      setEjecutando(null)
+    }
+  }
+
+  const activos = misCompromisos.filter(c => ['confirmado', 'ejecutado', 'vigente'].includes(c.estado))
+  const historicos = misCompromisos.filter(c => ['vencido', 'renovado', 'cancelado'].includes(c.estado))
 
   if (loading) {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Mis Compromisos</h2>
-        <Card>
-          <p className="text-[var(--muted)]">Cargando...</p>
-        </Card>
+        <Card><p className="text-[var(--muted)]">Cargando...</p></Card>
       </div>
     )
   }
+
+  const renderTabla = (lista: any[], titulo: string) => (
+    <div className="space-y-3">
+      <h3 className="text-base font-semibold text-[var(--muted)]">{titulo}</h3>
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[var(--line)]">
+                <th className="text-left p-3 text-sm text-[var(--muted)]">OP-ID</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">Cliente</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">Monto · Tasa</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">Confirmado</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">Ejecutado</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">Vencimiento</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">Estado</th>
+                <th className="text-left p-3 text-sm text-[var(--muted)]">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(comp => {
+                const dias = getDiasRestantes(comp.fecha_vencimiento)
+                const alertClass = getAlertClass(dias)
+                const isConfirmado = comp.estado === 'confirmado'
+                const isEjecutado = comp.estado === 'ejecutado'
+                const esAuditor = user?.role === 'banco_auditor'
+
+                return (
+                  <tr key={comp.id} className="border-b border-[var(--line)] hover:bg-white/5">
+                    <td className="p-3">
+                      <span className="font-mono text-sm font-semibold">{comp.op_id}</span>
+                    </td>
+                    <td className="p-3">
+                      <div className="font-semibold text-sm">{comp.cliente?.entidad}</div>
+                      <div className="text-xs text-[var(--muted)]">{comp.cliente?.nombre}</div>
+                    </td>
+                    <td className="p-3">
+                      <div className="font-semibold">{formatMoney(comp.monto, comp.moneda)}</div>
+                      <div className="text-sm text-[var(--good)]">{comp.tasa}%</div>
+                    </td>
+                    <td className="p-3 text-xs text-[var(--muted)]">
+                      {comp.fecha_confirmacion
+                        ? new Date(comp.fecha_confirmacion).toLocaleDateString('es-GT')
+                        : formatDate(comp.fecha_inicio)}
+                    </td>
+                    <td className="p-3 text-xs">
+                      {comp.fecha_ejecucion ? (
+                        <span className="text-green-400">
+                          {new Date(comp.fecha_ejecucion).toLocaleDateString('es-GT')}
+                        </span>
+                      ) : (
+                        <span className="text-[var(--muted)]">—</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-sm">
+                      <div>{formatDate(comp.fecha_vencimiento)}</div>
+                      <div className={`text-xs font-semibold ${alertClass}`}>{dias} días</div>
+                    </td>
+                    <td className="p-3">{estadoBadge(comp.estado)}</td>
+                    <td className="p-3">
+                      <div className="flex flex-col gap-1.5 min-w-[120px]">
+                        {/* Botón Ejecutar — solo banco no auditor, solo si confirmado */}
+                        {isConfirmado && !esAuditor && (
+                          <Button
+                            variant="primary"
+                            className="text-xs"
+                            onClick={() => handleEjecutar(comp)}
+                            disabled={ejecutando === comp.id}
+                          >
+                            {ejecutando === comp.id ? 'Ejecutando...' : '✓ Ejecutar'}
+                          </Button>
+                        )}
+                        {/* PDF Contrato */}
+                        <Button
+                          variant="small"
+                          className="text-xs"
+                          onClick={() => handleContrato(comp)}
+                          disabled={generandoPDF === comp.id + '-contrato'}
+                        >
+                          {generandoPDF === comp.id + '-contrato' ? '...' : 'PDF Contrato'}
+                        </Button>
+                        {/* PDF Ejecutado — solo si ya ejecutado */}
+                        {(isEjecutado || comp.estado === 'vigente') && (
+                          <Button
+                            variant="small"
+                            className="text-xs"
+                            onClick={() => handleEjecutado(comp)}
+                            disabled={generandoPDF === comp.id + '-ejecutado'}
+                          >
+                            {generandoPDF === comp.id + '-ejecutado' ? '...' : 'PDF Ejecutado'}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Mis Compromisos</h2>
-        <p className="text-[var(--muted)] mt-1">
-          Compromisos donde {user?.entidad} es el banco
-        </p>
+        <p className="text-[var(--muted)] mt-1">Compromisos donde {user?.entidad} es el banco</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      {/* KPIs */}
+      <div className="grid md:grid-cols-4 gap-4">
         <Card>
-          <div className="text-sm text-[var(--muted)]">Total Compromisos</div>
+          <div className="text-sm text-[var(--muted)]">Total</div>
           <div className="text-2xl font-black mt-1">{misCompromisos.length}</div>
         </Card>
         <Card>
-          <div className="text-sm text-[var(--muted)]">Vigentes</div>
+          <div className="text-sm text-[var(--muted)]">Confirmados</div>
+          <div className="text-2xl font-black mt-1 text-blue-400">
+            {misCompromisos.filter(c => c.estado === 'confirmado').length}
+          </div>
+          <div className="text-xs text-[var(--muted)] mt-0.5">Pendiente desembolso</div>
+        </Card>
+        <Card>
+          <div className="text-sm text-[var(--muted)]">Ejecutados / Vigentes</div>
           <div className="text-2xl font-black mt-1 text-[var(--good)]">
-            {misCompromisos.filter(c => c.estado === 'vigente').length}
+            {misCompromisos.filter(c => ['ejecutado', 'vigente'].includes(c.estado)).length}
           </div>
         </Card>
         <Card>
-          <div className="text-sm text-[var(--muted)]">Monto Total Colocado</div>
-          <div className="text-2xl font-black mt-1">
+          <div className="text-sm text-[var(--muted)]">Monto Colocado</div>
+          <div className="text-xl font-black mt-1">
             {formatMoney(
               misCompromisos
-                .filter(c => c.estado === 'vigente')
-                .reduce((sum, c) => sum + c.monto, 0),
+                .filter(c => ['ejecutado', 'vigente', 'confirmado'].includes(c.estado))
+                .reduce((s, c) => s + c.monto, 0),
               'GTQ'
             )}
           </div>
@@ -85,78 +228,13 @@ export const BancoCompromisos: React.FC = () => {
 
       {misCompromisos.length === 0 ? (
         <Card>
-          <p className="text-[var(--muted)] text-center py-8">
-            No tienes compromisos vigentes.
-          </p>
+          <p className="text-[var(--muted)] text-center py-8">No tienes compromisos registrados.</p>
         </Card>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[var(--line)]">
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">OP-ID</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Cliente</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Monto</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Tasa</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Inicio</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Vencimiento</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Días Rest.</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Estado</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {misCompromisos.map(comp => {
-                  const diasRestantes = getDiasRestantes(comp.fecha_vencimiento)
-                  const alertClass = getAlertClass(diasRestantes)
-
-                  return (
-                    <tr key={comp.id} className="border-b border-[var(--line)] hover:bg-white/5">
-                      <td className="p-3">
-                        <span className="font-mono text-sm font-semibold">{comp.op_id}</span>
-                      </td>
-                      <td className="p-3">
-                        <div className="font-semibold text-sm">{comp.cliente?.entidad}</div>
-                        <div className="text-xs text-[var(--muted)]">{comp.cliente?.nombre}</div>
-                      </td>
-                      <td className="p-3 font-semibold">
-                        {formatMoney(comp.monto, comp.moneda)}
-                      </td>
-                      <td className="p-3 font-semibold text-[var(--good)]">
-                        {comp.tasa}%
-                      </td>
-                      <td className="p-3 text-sm">{formatDate(comp.fecha_inicio)}</td>
-                      <td className="p-3 text-sm">{formatDate(comp.fecha_vencimiento)}</td>
-                      <td className="p-3">
-                        <span className={`font-semibold ${alertClass}`}>
-                          {diasRestantes} días
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          comp.estado === 'vigente' ? 'bg-green-900/20 text-green-200' :
-                          comp.estado === 'vencido' ? 'bg-red-900/20 text-red-200' :
-                          'bg-gray-900/20 text-gray-200'
-                        }`}>
-                          {comp.estado}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <Button
-                          variant="small"
-                          onClick={() => handleGenerarPDF(comp)}
-                        >
-                          Ver PDF
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <div className="space-y-6">
+          {activos.length > 0 && renderTabla(activos, 'Activos')}
+          {historicos.length > 0 && renderTabla(historicos, 'Histórico')}
+        </div>
       )}
     </div>
   )
