@@ -16,6 +16,10 @@ export type TipoDocumentoKYC = 'cedula' | 'rtu' | 'patente' | 'estados_financier
 
 export type EstadoDocumentoKYC = 'pendiente' | 'aprobado' | 'rechazado'
 
+export type EstadoSolicitudColocacion = 'abierta' | 'cerrada' | 'cancelada'
+
+export type EstadoOfertaColocacion = 'enviada' | 'aceptada' | 'rechazada'
+
 export interface User {
   id: string
   email: string
@@ -147,6 +151,34 @@ export interface ReglasBanco {
   activo: boolean
   created_at: string
   updated_at: string
+}
+
+export interface SolicitudColocacion {
+  id: string
+  cliente_id: string
+  moneda: Moneda
+  monto?: number | null
+  plazo: number
+  tasa_objetivo?: number | null
+  fecha_cierre: string
+  estado: EstadoSolicitudColocacion
+  notas?: string
+  created_at: string
+  updated_at: string
+  cliente?: { nombre: string; entidad: string }
+}
+
+export interface OfertaColocacion {
+  id: string
+  solicitud_id: string
+  banco_id: string
+  tasa: number
+  monto: number
+  notas?: string
+  estado: EstadoOfertaColocacion
+  created_at: string
+  updated_at: string
+  banco?: { nombre: string; entidad: string }
 }
 
 export interface Auditoria {

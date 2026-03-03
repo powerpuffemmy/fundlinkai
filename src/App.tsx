@@ -9,6 +9,9 @@ import { ClienteDashboard } from './pages/ClienteDashboard'
 import { BancoDashboard } from './pages/BancoDashboard'
 import { WebAdminDashboard } from './pages/WebAdminDashboard'
 import { NuevaSubasta } from './pages/NuevaSubasta'
+import { NuevaSolicitudColocacion } from './pages/NuevaSolicitudColocacion'
+import { ClienteSolicitudesColocacion } from './pages/ClienteSolicitudesColocacion'
+import { BancoColocaciones } from './pages/BancoColocaciones'
 import { ClienteSubastas } from './pages/ClienteSubastas'
 import { HistorialSubastas } from './pages/HistorialSubastas'
 import { ClienteCompromisos } from './pages/ClienteCompromisos'
@@ -28,8 +31,8 @@ import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { Button } from './components/common/Button'
 
-type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion'
-type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion'
+type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'colocaciones' | 'nueva-colocacion'
+type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion' | 'colocaciones'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones'
 type Page = ClientePage | BancoPage | WebAdminPage
 
@@ -145,6 +148,12 @@ function App() {
             Vencimientos
           </Button>
           <Button
+            variant={currentPage === 'colocaciones' || currentPage === 'nueva-colocacion' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('colocaciones')}
+          >
+            Colocaciones
+          </Button>
+          <Button
             variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('configuracion')}
           >
@@ -197,7 +206,13 @@ function App() {
               Clientes
             </Button>
           )}
-          <Button 
+          <Button
+            variant={currentPage === 'colocaciones' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('colocaciones')}
+          >
+            Colocaciones
+          </Button>
+          <Button
             variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('configuracion')}
           >
@@ -266,6 +281,10 @@ function App() {
           return <ClienteCompromisos />
         case 'vencimientos':
           return <ClienteVencimientos />
+        case 'colocaciones':
+          return <ClienteSolicitudesColocacion onNueva={() => setCurrentPage('nueva-colocacion')} />
+        case 'nueva-colocacion':
+          return <NuevaSolicitudColocacion onCreada={() => setCurrentPage('colocaciones')} />
         case 'configuracion':
           return <ClienteConfiguracion />
         default:
@@ -285,6 +304,8 @@ function App() {
           return <BancoCompromisos />
         case 'clientes':
           return <BancoClientes />
+        case 'colocaciones':
+          return <BancoColocaciones />
         case 'configuracion':
           return <BancoConfiguracion />
         default:
