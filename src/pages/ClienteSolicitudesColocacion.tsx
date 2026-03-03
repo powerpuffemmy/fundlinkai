@@ -147,12 +147,21 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
                     <div className="flex items-center gap-3 flex-wrap">
                       {estadoBadge(sol.estado)}
                       <span className="font-semibold text-lg">
-                        {sol.monto ? formatMoney(sol.monto, sol.moneda) : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
+                        {sol.monto ? `Máx. ${formatMoney(sol.monto, sol.moneda)}` : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
                       </span>
+                      {sol.tasa_objetivo && (
+                        <span className="text-sm font-semibold text-[var(--good)]">
+                          {sol.tasa_objetivo}%
+                          {sol.tipo_tasa && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
+                              {sol.tipo_tasa}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-4 mt-1 text-sm text-[var(--muted)]">
                       <span>Cierre: {new Date(sol.fecha_cierre).toLocaleDateString('es-GT')}</span>
-                      {sol.tasa_objetivo && <span>Tasa objetivo: {sol.tasa_objetivo}%</span>}
                       <span className={ofertasPendientes.length > 0 ? 'text-blue-300 font-semibold' : ''}>
                         {(sol.ofertas || []).length} oferta(s)
                         {ofertasPendientes.length > 0 && ` · ${ofertasPendientes.length} pendiente(s)`}

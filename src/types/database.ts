@@ -153,6 +153,8 @@ export interface ReglasBanco {
   updated_at: string
 }
 
+export type TipoTasaColocacion = 'firme' | 'cierre' | 'indicativa'
+
 export interface SolicitudColocacion {
   id: string
   cliente_id: string
@@ -160,6 +162,7 @@ export interface SolicitudColocacion {
   monto?: number | null
   plazo: number
   tasa_objetivo?: number | null
+  tipo_tasa?: TipoTasaColocacion | null
   fecha_cierre: string
   estado: EstadoSolicitudColocacion
   notas?: string

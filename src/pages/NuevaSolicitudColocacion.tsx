@@ -36,7 +36,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
   const [plazo, setPlazo] = useState('30')
   const [usarPlazoPersonalizado, setUsarPlazoPersonalizado] = useState(false)
   const [plazoPersonalizado, setPlazoPersonalizado] = useState('')
-  const [tasaObjetivo, setTasaObjetivo] = useState('')
+  const [tasa, setTasa] = useState('')
+  const [tipoTasa, setTipoTasa] = useState<'firme' | 'cierre' | 'indicativa' | ''>('')
   const [fechaCierre, setFechaCierre] = useState('')
   const [notas, setNotas] = useState('')
 
@@ -126,7 +127,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
         moneda,
         monto: montoNum,
         plazo: plazoFinal,
-        tasa_objetivo: tasaObjetivo ? parseFloat(tasaObjetivo) : null,
+        tasa_objetivo: tasa ? parseFloat(tasa) : null,
+        tipo_tasa: tipoTasa || null,
         fecha_cierre: new Date(fechaCierre + 'T23:59:59').toISOString(),
         notas: notas || undefined
       })
@@ -236,7 +238,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
 
               {usarMonto && (
                 <Input
-                  label="Monto"
+                  label="Monto Máximo"
                   type="number"
                   value={monto}
                   onChange={(e) => setMonto(e.target.value)}
@@ -293,14 +295,28 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
                 />
               )}
 
-              <Input
-                label="Tasa Objetivo (%) - Opcional"
-                type="number"
-                step="0.01"
-                value={tasaObjetivo}
-                onChange={(e) => setTasaObjetivo(e.target.value)}
-                placeholder="Ej: 5.50"
-              />
+              {/* Tasa + Tipo de tasa */}
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Tasa (%) - Opcional"
+                  type="number"
+                  step="0.01"
+                  value={tasa}
+                  onChange={(e) => setTasa(e.target.value)}
+                  placeholder="Ej: 5.50"
+                />
+                <Select
+                  label="Tipo de Tasa"
+                  options={[
+                    { value: '', label: '— Sin tipo —' },
+                    { value: 'firme', label: 'Firme' },
+                    { value: 'cierre', label: 'Cierre' },
+                    { value: 'indicativa', label: 'Indicativa' }
+                  ]}
+                  value={tipoTasa}
+                  onChange={(e) => setTipoTasa(e.target.value as any)}
+                />
+              </div>
 
               <Input
                 label="Fecha de Cierre"
@@ -363,9 +379,14 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Tasa objetivo:</span>
+                <span className="text-[var(--muted)]">Tasa:</span>
                 <span className="font-semibold text-[var(--good)]">
-                  {tasaObjetivo ? `${tasaObjetivo}%` : '—'}
+                  {tasa ? `${tasa}%` : '—'}
+                  {tasa && tipoTasa && (
+                    <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
+                      {tipoTasa}
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -398,13 +419,13 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
       </div>
 
       <Card className="bg-purple-900/10 border-purple-900/50">
-        <div className="grid md:grid-cols-4 gap-4 text-sm">
+        <div className="grid md:grid-cols-5 gap-4 text-sm">
           <div>
             <div className="text-[var(--muted)]">Moneda</div>
             <div className="font-bold text-lg text-purple-300">{datosTemp?.moneda}</div>
           </div>
           <div>
-            <div className="text-[var(--muted)]">Monto</div>
+            <div className="text-[var(--muted)]">Monto Máx.</div>
             <div className="font-bold text-lg">
               {datosTemp?.monto ? formatMoney(datosTemp.monto, datosTemp.moneda) : 'Libre'}
             </div>
@@ -412,6 +433,17 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
           <div>
             <div className="text-[var(--muted)]">Plazo</div>
             <div className="font-bold text-lg">{datosTemp?.plazo} días</div>
+          </div>
+          <div>
+            <div className="text-[var(--muted)]">Tasa</div>
+            <div className="font-bold text-lg text-[var(--good)]">
+              {datosTemp?.tasa_objetivo ? `${datosTemp.tasa_objetivo}%` : '—'}
+              {datosTemp?.tipo_tasa && (
+                <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
+                  {datosTemp.tipo_tasa}
+                </span>
+              )}
+            </div>
           </div>
           <div>
             <div className="text-[var(--muted)]">Cierre</div>

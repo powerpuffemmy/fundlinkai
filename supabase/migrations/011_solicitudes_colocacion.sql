@@ -123,3 +123,11 @@ CREATE POLICY "cliente_update_oferta_col" ON ofertas_colocacion
 -- ============================================
 -- FIN DE MIGRACIÓN 011
 -- ============================================
+
+-- ============================================
+-- Actualización 011b: campo tipo_tasa
+-- (ejecutado vía API, documentado aquí)
+-- ============================================
+-- ALTER TABLE solicitudes_colocacion
+--   ADD COLUMN IF NOT EXISTS tipo_tasa TEXT
+--   CHECK (tipo_tasa IS NULL OR tipo_tasa IN ('firme', 'cierre', 'indicativa'));

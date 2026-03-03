@@ -7,6 +7,8 @@ import { formatMoney, formatDate } from '@/lib/utils'
 import { calcularVencimiento, getIconoVencimiento } from '@/lib/vencimientoUtils'
 import type { Moneda, Compromiso } from '@/types/database'
 
+const GTQ_PER_USD = 7.7
+
 type VistaType = 'semanal' | 'mensual'
 
 interface CompromisoConBanco extends Compromiso {
@@ -161,9 +163,38 @@ export const ClienteVencimientos: React.FC = () => {
 
   // Totales generales
   const totales = useMemo(() => {
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+
+    const en7dias = new Date(hoy)
+    en7dias.setDate(en7dias.getDate() + 7)
+
+    const en30dias = new Date(hoy)
+    en30dias.setDate(en30dias.getDate() + 30)
+
     const totalGTQ = vigentes.filter(c => c.moneda === 'GTQ').reduce((s, c) => s + c.monto, 0)
     const totalUSD = vigentes.filter(c => c.moneda === 'USD').reduce((s, c) => s + c.monto, 0)
-    return { totalGTQ, totalUSD, count: vigentes.length }
+    const totalPortafolio = totalGTQ + totalUSD * GTQ_PER_USD
+
+    const vencer7 = vigentes.filter(c => {
+      const fv = new Date(c.fecha_vencimiento)
+      return fv >= hoy && fv <= en7dias
+    })
+    const vencer30 = vigentes.filter(c => {
+      const fv = new Date(c.fecha_vencimiento)
+      return fv >= hoy && fv <= en30dias
+    })
+
+    const vencer7GTQ = vencer7.filter(c => c.moneda === 'GTQ').reduce((s, c) => s + c.monto, 0)
+    const vencer7USD = vencer7.filter(c => c.moneda === 'USD').reduce((s, c) => s + c.monto, 0)
+    const vencer30GTQ = vencer30.filter(c => c.moneda === 'GTQ').reduce((s, c) => s + c.monto, 0)
+    const vencer30USD = vencer30.filter(c => c.moneda === 'USD').reduce((s, c) => s + c.monto, 0)
+
+    return {
+      totalGTQ, totalUSD, totalPortafolio, count: vigentes.length,
+      vencer7GTQ, vencer7USD, vencer7Total: vencer7GTQ + vencer7USD * GTQ_PER_USD,
+      vencer30GTQ, vencer30USD, vencer30Total: vencer30GTQ + vencer30USD * GTQ_PER_USD
+    }
   }, [vigentes])
 
   // Maximo monto para las barras proporcionales
@@ -214,16 +245,28 @@ export const ClienteVencimientos: React.FC = () => {
       {/* Resumen general */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <div className="text-sm text-[var(--muted)]">Compromisos Vigentes</div>
-          <div className="text-2xl font-black mt-1">{totales.count}</div>
+          <div className="text-sm text-[var(--muted)]">Total del Portafolio</div>
+          <div className="text-2xl font-black mt-1">{formatMoney(totales.totalPortafolio, 'GTQ')}</div>
+          <div className="flex gap-3 mt-1 text-xs text-[var(--muted)]">
+            {totales.totalGTQ > 0 && <span>Q {formatMoney(totales.totalGTQ, 'GTQ')}</span>}
+            {totales.totalUSD > 0 && <span>$ {formatMoney(totales.totalUSD, 'USD')}</span>}
+          </div>
         </Card>
         <Card>
-          <div className="text-sm text-[var(--muted)]">Total GTQ por Vencer</div>
-          <div className="text-2xl font-black mt-1">{formatMoney(totales.totalGTQ, 'GTQ')}</div>
+          <div className="text-sm text-[var(--muted)]">Total por Vencer (7 días)</div>
+          <div className="text-2xl font-black mt-1 text-yellow-300">{formatMoney(totales.vencer7Total, 'GTQ')}</div>
+          <div className="flex gap-3 mt-1 text-xs text-[var(--muted)]">
+            {totales.vencer7GTQ > 0 && <span>Q {formatMoney(totales.vencer7GTQ, 'GTQ')}</span>}
+            {totales.vencer7USD > 0 && <span>$ {formatMoney(totales.vencer7USD, 'USD')}</span>}
+          </div>
         </Card>
         <Card>
-          <div className="text-sm text-[var(--muted)]">Total USD por Vencer</div>
-          <div className="text-2xl font-black mt-1">{formatMoney(totales.totalUSD, 'USD')}</div>
+          <div className="text-sm text-[var(--muted)]">Total por Vencer (30 días)</div>
+          <div className="text-2xl font-black mt-1 text-orange-300">{formatMoney(totales.vencer30Total, 'GTQ')}</div>
+          <div className="flex gap-3 mt-1 text-xs text-[var(--muted)]">
+            {totales.vencer30GTQ > 0 && <span>Q {formatMoney(totales.vencer30GTQ, 'GTQ')}</span>}
+            {totales.vencer30USD > 0 && <span>$ {formatMoney(totales.vencer30USD, 'USD')}</span>}
+          </div>
         </Card>
       </div>
 
@@ -295,12 +338,17 @@ export const ClienteVencimientos: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <div className="flex gap-3 text-sm">
+                      <div className="flex gap-3 text-sm items-center">
                         {bucket.totalGTQ > 0 && (
-                          <span className="font-semibold">{formatMoney(bucket.totalGTQ, 'GTQ')}</span>
+                          <span className="font-semibold text-green-300">{formatMoney(bucket.totalGTQ, 'GTQ')}</span>
                         )}
                         {bucket.totalUSD > 0 && (
                           <span className="font-semibold text-blue-300">{formatMoney(bucket.totalUSD, 'USD')}</span>
+                        )}
+                        {(bucket.totalGTQ > 0 || bucket.totalUSD > 0) && (
+                          <span className="font-bold text-white border-l border-white/20 pl-3">
+                            Total {formatMoney(bucket.totalGTQ + bucket.totalUSD * GTQ_PER_USD, 'GTQ')}
+                          </span>
                         )}
                       </div>
                     </div>

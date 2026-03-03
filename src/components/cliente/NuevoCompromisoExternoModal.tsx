@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
 import { useCompromisos } from '@/hooks/useCompromisos'
+import { useClienteBancoLimites } from '@/hooks/useClienteBancoLimites'
 import toast from 'react-hot-toast'
 import type { Moneda } from '@/types/database'
 
@@ -18,7 +19,20 @@ export const NuevoCompromisoExternoModal: React.FC<NuevoCompromisoExternoModalPr
   onSuccess,
 }) => {
   const { crearCompromisoExterno, subirDocumentoCompromiso } = useCompromisos()
+  const { obtenerTodosBancos } = useClienteBancoLimites()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [bancosOptions, setBancosOptions] = useState<{ value: string; label: string }[]>([])
+
+  useEffect(() => {
+    obtenerTodosBancos().then((bancos: any[]) => {
+      const opts = (bancos || []).map((b: any) => ({
+        value: b.banco_entidad || b.banco_nombre,
+        label: b.banco_entidad || b.banco_nombre
+      }))
+      setBancosOptions([{ value: '', label: '— Selecciona un banco —' }, ...opts])
+    })
+  }, [])
 
   const [form, setForm] = useState({
     contraparte_nombre: '',
@@ -137,13 +151,12 @@ export const NuevoCompromisoExternoModal: React.FC<NuevoCompromisoExternoModalPr
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Contraparte (Banco / Institución)"
+          <Select
+            label="Banco / Institución"
             name="contraparte_nombre"
             value={form.contraparte_nombre}
             onChange={handleChange}
-            placeholder="Ej: Banco Industrial"
-            required
+            options={bancosOptions.length > 1 ? bancosOptions : [{ value: '', label: 'Cargando bancos...' }]}
           />
 
           <div className="grid grid-cols-2 gap-3">

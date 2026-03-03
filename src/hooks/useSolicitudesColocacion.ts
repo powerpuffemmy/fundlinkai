@@ -90,6 +90,7 @@ export const useSolicitudesColocacion = () => {
       monto?: number | null
       plazo: number
       tasa_objetivo?: number | null
+      tipo_tasa?: 'firme' | 'cierre' | 'indicativa' | null
       fecha_cierre: string
       notas?: string
     },

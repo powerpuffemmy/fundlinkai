@@ -147,15 +147,22 @@ export const BancoColocaciones: React.FC = () => {
                         </span>
                       )}
                       <span className="font-semibold text-lg">
-                        {sol.monto ? formatMoney(sol.monto, sol.moneda) : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
+                        {sol.monto ? `Máx. ${formatMoney(sol.monto, sol.moneda)}` : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
                       </span>
+                      {sol.tasa_objetivo && (
+                        <span className="text-sm font-semibold text-[var(--good)]">
+                          {sol.tasa_objetivo}%
+                          {sol.tipo_tasa && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
+                              {sol.tipo_tasa}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-4 mt-1 text-sm text-[var(--muted)] flex-wrap">
                       <span>Cliente: <strong className="text-white">{sol.cliente?.nombre} ({sol.cliente?.entidad})</strong></span>
                       <span>Cierre: {new Date(sol.fecha_cierre).toLocaleDateString('es-GT')}</span>
-                      {sol.tasa_objetivo && (
-                        <span>Tasa objetivo: <strong className="text-[var(--good)]">{sol.tasa_objetivo}%</strong></span>
-                      )}
                     </div>
                     <div className="text-xs text-[var(--muted)] mt-1">
                       Recibida: {new Date(sol.created_at).toLocaleString('es-GT')}
