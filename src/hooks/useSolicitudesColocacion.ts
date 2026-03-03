@@ -148,9 +148,12 @@ export const useSolicitudesColocacion = () => {
   }) => {
     if (!user) throw new Error('Usuario no autenticado')
 
+    // banco_admin auto-aprueba; banco_mesa requiere aprobación
+    const aprobada_por_admin = user.role === 'banco_admin'
+
     const { data, error } = await supabase
       .from('ofertas_colocacion')
-      .insert([{ banco_id: user.id, ...datos, estado: 'enviada' }])
+      .insert([{ banco_id: user.id, ...datos, estado: 'enviada', aprobada_por_admin }])
       .select()
       .single()
 
