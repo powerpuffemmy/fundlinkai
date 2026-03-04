@@ -165,7 +165,7 @@ export const BancoCompromisos: React.FC = () => {
                           {generandoPDF === comp.id + '-contrato' ? '...' : 'PDF Contrato'}
                         </Button>
                         {/* PDF Ejecutado — solo si ya ejecutado */}
-                        {(isEjecutado || comp.estado === 'vigente') && (
+                        {isEjecutado && (
                           <Button
                             variant="small"
                             className="text-xs"

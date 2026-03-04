@@ -324,7 +324,7 @@ export const ClienteCompromisos: React.FC = () => {
                               >
                                 PDF Contrato
                               </Button>
-                              {(comp.estado === 'ejecutado' || comp.estado === 'vigente') && (
+                              {comp.estado === 'ejecutado' && (
                                 <Button
                                   variant="small"
                                   onClick={() => generarPDFEjecutado({
