@@ -98,7 +98,8 @@ const estilosBase = `
 `
 
 // ─────────────────────────────────────────────────────────────────
-// 1. PDF CONTRATO (Compromiso confirmado)
+// 1. PDF CONSTANCIA DE INTENCIÓN (antes: "Contrato")
+//    Texto revisado por abogado — documento preliminar, NO vinculante
 // ─────────────────────────────────────────────────────────────────
 export const generarPDFContrato = async (compromiso: CompromisoConDetalles) => {
   const verifyUrl = `${window.location.origin}?verify=${compromiso.id}`
@@ -110,85 +111,146 @@ export const generarPDFContrato = async (compromiso: CompromisoConDetalles) => {
   const bancoRep = esExterno ? '—' : (compromiso.banco_nombre || '—')
   const intereses = (compromiso.monto * compromiso.tasa / 100 * compromiso.plazo) / 360
   const fmt = (v: number) => new Intl.NumberFormat('es-GT', { style: 'currency', currency: compromiso.moneda }).format(v)
+  const monedaLabel = compromiso.moneda === 'USD' ? 'Dólares Estadounidenses (USD)' : 'Quetzales Guatemaltecos (GTQ)'
+  const fechaEmision = compromiso.fecha_confirmacion
+    ? new Date(compromiso.fecha_confirmacion).toLocaleString('es-GT')
+    : new Date(compromiso.created_at).toLocaleString('es-GT')
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<title>Contrato ${compromiso.op_id}</title>
-<style>${estilosBase}</style></head><body>
-<div class="watermark">FUNDLinkAI</div>
+<title>Constancia ${compromiso.op_id}</title>
+<style>
+${estilosBase}
+.nature-box { background:#fff8f0; border:2px solid #f59e0b; border-radius:6px; padding:14px 18px; margin:18px 0; }
+.nature-box p { margin:4px 0; font-size:13px; }
+.nature-title { font-size:14px; font-weight:bold; color:#b45309; margin-bottom:8px; }
+.clause { margin:10px 0; padding:10px 14px; background:#f9fafb; border-left:3px solid #6b7280; font-size:12.5px; }
+.clause strong { color:#1e3a5f; }
+.disclaimer { background:#fef3c7; border:1px solid #f59e0b; border-radius:4px; padding:12px 16px; font-size:11px; color:#78350f; margin-top:20px; line-height:1.6; }
+.estado-banner { text-align:center; border:2px dashed #9ca3af; border-radius:6px; padding:8px; margin:12px 0; color:#6b7280; font-size:13px; font-style:italic; }
+</style></head><body>
+<div class="watermark">PRELIMINAR</div>
+
 <div class="header">
   <div class="header-top">
     <div class="header-left">
-      <h1>CONTRATO DE COLOCACIÓN</h1>
-      <div class="op-id">${compromiso.op_id}</div>
+      <p style="font-size:11px;color:#888;margin:0 0 4px">FUNDLink AI</p>
+      <h1 style="font-size:18px">CONSTANCIA DE INTENCIÓN DE COLOCACIÓN</h1>
+      <p style="font-size:11px;color:#b45309;margin:2px 0">(DOCUMENTO PRELIMINAR – NO VINCULANTE – NO CONTRACTUAL)</p>
+      <div class="op-id" style="margin-top:6px">Número de Operación: ${compromiso.op_id}</div>
+      <div style="margin-top:4px;font-size:12px;color:#666">Fecha de Emisión: ${fechaEmision}</div>
       <div style="margin-top:8px">
-        <span class="badge badge-${compromiso.estado}">${compromiso.estado.toUpperCase()}</span>
+        <span class="badge badge-${compromiso.estado}">${compromiso.estado.toUpperCase()} — PRELIMINAR · NO EJECUTADO</span>
       </div>
     </div>
     ${qrSrc ? `<div class="qr-box"><img src="${qrSrc}" alt="QR"><p>Verificar en FUNDLINK</p></div>` : ''}
   </div>
 </div>
 
-<div class="info-box">
-  <div class="info-row">
-    <div class="info-item"><label>Fecha de Confirmación</label>
-      <strong>${compromiso.fecha_confirmacion ? new Date(compromiso.fecha_confirmacion).toLocaleString('es-GT') : new Date(compromiso.created_at).toLocaleString('es-GT')}</strong>
-    </div>
-    <div class="info-item"><label>Fecha de Vencimiento</label>
-      <strong>${new Date(compromiso.fecha_vencimiento).toLocaleDateString('es-GT')}</strong>
-    </div>
-    <div class="info-item"><label>Estado</label>
-      <strong>${compromiso.estado.toUpperCase()}</strong>
-    </div>
-  </div>
-</div>
-
 <div class="section">
-  <div class="section-title">PARTES CONTRATANTES</div>
+  <div class="section-title">PARTES INTERVINIENTES</div>
   <table>
     <tr><th>Parte</th><th>Entidad</th><th>Representante</th></tr>
-    <tr><td><strong>${esExterno ? 'LA CONTRAPARTE' : 'EL BANCO'}</strong></td><td>${bancoLabel}</td><td>${bancoRep}</td></tr>
+    <tr><td><strong>EL BANCO</strong></td><td>${bancoLabel}</td><td>${bancoRep}</td></tr>
     <tr><td><strong>EL CLIENTE</strong></td><td>${compromiso.cliente_entidad || '—'}</td><td>${compromiso.cliente_nombre || '—'}</td></tr>
   </table>
 </div>
 
+<div class="nature-box">
+  <div class="nature-title">NATURALEZA DEL DOCUMENTO (DECLARACIÓN EXPRESA)</div>
+  <p>La presente Constancia de Intención de Colocación:</p>
+  <p>a) <strong>NO</strong> constituye un contrato financiero;</p>
+  <p>b) <strong>NO</strong> es un título ejecutivo;</p>
+  <p>c) <strong>NO</strong> genera obligación exigible;</p>
+  <p>d) <strong>NO</strong> implica captación de fondos;</p>
+  <p>e) <strong>NO</strong> implica intermediación financiera;</p>
+  <p>f) <strong>NO</strong> obliga ni compromete a FUNDLINK, S.A.</p>
+  <p style="margin-top:8px;font-style:italic">Este documento es generado únicamente como constancia tecnológica, reflejando una manifestación preliminar de voluntad entre el BANCO y el CLIENTE, sujeta a validaciones posteriores.</p>
+</div>
+
 <div class="section">
-  <div class="section-title">CONDICIONES FINANCIERAS</div>
+  <div class="section-title">CONDICIONES FINANCIERAS PRELIMINARES <small style="font-weight:normal;color:#888">(Referenciales – no vinculantes)</small></div>
+  <div class="info-box" style="margin-bottom:10px">
+    <div class="info-row">
+      <div class="info-item"><label>Monto Principal</label><strong class="highlight">${fmt(compromiso.monto)}</strong></div>
+      <div class="info-item"><label>Intereses Estimados</label><strong style="color:#10b981">${fmt(intereses)}</strong></div>
+      <div class="info-item"><label>Monto al Cierre Estimado</label><strong>${fmt(compromiso.monto + intereses)}</strong></div>
+    </div>
+  </div>
   <table>
     <tr><th>Concepto</th><th>Detalle</th></tr>
-    <tr><td><strong>Monto Principal</strong></td><td class="highlight">${fmt(compromiso.monto)}</td></tr>
-    <tr><td><strong>Moneda</strong></td><td>${compromiso.moneda === 'USD' ? 'Dólares (USD)' : 'Quetzales (GTQ)'}</td></tr>
-    <tr><td><strong>Tasa Anual</strong></td><td class="highlight-green">${compromiso.tasa}%</td></tr>
+    <tr><td><strong>Moneda</strong></td><td>${monedaLabel}</td></tr>
+    <tr><td><strong>Tasa de Interés Anual</strong></td><td class="highlight-green">${compromiso.tasa}%</td></tr>
     <tr><td><strong>Plazo</strong></td><td>${compromiso.plazo} días calendario</td></tr>
     <tr><td><strong>Fecha de Inicio</strong></td><td>${new Date(compromiso.fecha_inicio).toLocaleDateString('es-GT')}</td></tr>
     <tr><td><strong>Fecha de Vencimiento</strong></td><td>${new Date(compromiso.fecha_vencimiento).toLocaleDateString('es-GT')}</td></tr>
-    <tr><td><strong>Intereses Estimados (30/360)</strong></td><td>${fmt(intereses)}</td></tr>
   </table>
+  <p style="font-size:11px;color:#888;margin-top:6px;font-style:italic">Los valores anteriores son estimativos y podrán variar al momento de la formalización definitiva.</p>
 </div>
 
 <div class="section">
-  <div class="section-title">TÉRMINOS Y CONDICIONES</div>
-  <div class="terms"><p><strong>1. OBJETO:</strong> El Banco se compromete a recibir los fondos del Cliente por el plazo indicado, devengando intereses a la tasa convenida.</p></div>
-  <div class="terms"><p><strong>2. DESEMBOLSO:</strong> El Cliente debe ejecutar la transferencia dentro de las <strong>24 horas</strong> siguientes a la firma.</p></div>
-  <div class="terms"><p><strong>3. INTERESES:</strong> Calculados sobre base 30/360, pagaderos al vencimiento junto con el principal.</p></div>
-  <div class="terms"><p><strong>4. PREPAGO:</strong> No se permite el prepago salvo acuerdo previo por escrito.</p></div>
-  <div class="terms"><p><strong>5. CUMPLIMIENTO:</strong> Sujeto a políticas KYC/AML vigentes de ambas partes.</p></div>
-  <div class="terms"><p><strong>6. JURISDICCIÓN:</strong> Tribunales competentes según la legislación guatemalteca aplicable.</p></div>
+  <div class="section-title">TÉRMINOS Y CONDICIONES PRELIMINARES <small style="font-weight:normal;color:#888">(NO VINCULANTES)</small></div>
+
+  <div class="clause"><strong>DECLARACIONES DEL BANCO:</strong> El BANCO declara que: a) La oferta reflejada es preliminar y sujeta a aprobación interna; b) La operación está sujeta a KYC/AML, análisis de riesgo y políticas internas; c) Ninguna obligación nace hasta la firma de contratos bancarios definitivos.</div>
+
+  <div class="clause"><strong>DECLARACIONES DEL CLIENTE:</strong> El CLIENTE declara que: a) Su manifestación de intención es preliminar y no vinculante; b) Cuenta con facultades suficientes para emitirla; c) La ejecución dependerá de la firma de contratos definitivos con el BANCO.</div>
+
+  <div class="clause"><strong>OBJETO DEL COMPROMISO:</strong> Este documento resume una oferta preliminar donde el Banco propone recibir fondos del Cliente por el plazo indicado, devengando intereses a la tasa estimada. No constituye un contrato vinculante y requiere ejecución independiente por las partes.</div>
+
+  <div class="clause"><strong>OBLIGACIONES PRELIMINARES DEL CLIENTE:</strong> El Cliente propone ejecutar la transferencia de fondos dentro de las 24 horas siguientes a la aceptación de la oferta, pero esta obligación es condicional a la firma de un contrato físico entre las partes.</div>
+
+  <div class="clause"><strong>CÁLCULO DE INTERESES:</strong> Los intereses se calcularán estimativamente sobre la base 30/360, pagaderos al vencimiento junto con el principal, sujeto a ajustes en el contrato final.</div>
+
+  <div class="clause"><strong>PREPAGO:</strong> No se permite el prepago de la operación salvo acuerdo previo por escrito entre las partes en el contrato definitivo.</div>
+
+  <div class="clause"><strong>CUMPLIMIENTO NORMATIVO:</strong> Esta propuesta preliminar está sujeta a las políticas KYC/AML vigentes de ambas partes, así como a la legislación guatemalteca, incluyendo la Ley contra el Lavado de Dinero u Otros Activos (Decreto 67-2001) y regulaciones de la Superintendencia de Bancos (SIB).</div>
+
+  <div class="clause"><strong>JURISDICCIÓN:</strong> Cualquier controversia derivada de la ejecución futura de esta propuesta se someterá a los tribunales competentes de la República de Guatemala, según la legislación aplicable (Código Civil, Decreto-Ley 106; Ley de Bancos y Grupos Financieros, Decreto 19-2002).</div>
+
+  <div class="clause"><strong>ROL Y LIMITACIÓN DE RESPONSABILIDAD DE FUNDLINK:</strong> FUNDLINK, S.A.: a) No recibe, custodia, administra ni transfiere fondos; b) No actúa como intermediario financiero, agente, corredor o mandatario; c) No garantiza ejecución, tasas ni cumplimiento; d) No es parte de la relación jurídica o financiera; e) Actúa únicamente como proveedor tecnológico neutral, de buena fe.</div>
 </div>
 
-${compromiso.notas ? `<div class="section"><div class="section-title">NOTAS</div><div class="info-box"><p>${compromiso.notas}</p></div></div>` : ''}
+<div class="section">
+  <div class="section-title">CLÁUSULAS ADICIONALES <small style="font-weight:normal;color:#888">(Preliminares y No Vinculantes)</small></div>
+
+  <div class="clause"><strong>CONDICIONES DE RIESGO Y FILTROS:</strong> La oferta se basa en los filtros de inversión especificados por el Cliente, y el Banco confirma su capacidad para cumplir con estos bajo sus políticas internas. Cualquier ajuste requiere negociación directa entre las partes.</div>
+
+  <div class="clause"><strong>CONDICIÓN DE EJECUCIÓN:</strong> Cualquier operación solo podrá ejecutarse cuando: a) Se hayan cumplido los procesos internos del BANCO; b) Se haya firmado un contrato financiero definitivo entre BANCO y CLIENTE; c) Se haya realizado la transferencia directa entre las partes, fuera de la plataforma.</div>
+
+  <div class="clause"><strong>COMISIONES Y COSTOS:</strong> No se incluyen comisiones adicionales en esta propuesta preliminar, salvo las pactadas directamente entre el Banco y el Cliente en el contrato final. FundLink AI cobra una comisión al Banco por la facilitación tecnológica, pero no afecta al Cliente.</div>
+
+  <div class="clause"><strong>CONDICIONES DE CANCELACIÓN:</strong> Cualquiera de las partes podrá retirar su intención antes de la ejecución definitiva, sin penalizaciones, notificando a través de la Plataforma.</div>
+
+  <div class="clause"><strong>CONFIDENCIALIDAD:</strong> Ambas partes se comprometen preliminarmente a mantener la confidencialidad de los términos aquí resumidos, conforme a la Ley de Acceso a la Información Pública (Decreto 57-2008) y regulaciones de datos personales.</div>
+
+  <div class="clause"><strong>FUERZA MAYOR:</strong> Cualquier ejecución futura estará sujeta a eventos de fuerza mayor (desastres naturales, cambios regulatorios), conforme al Artículo 1424 del Código Civil.</div>
+
+  <div class="clause"><strong>MODIFICACIONES:</strong> Cualquier modificación a los términos resumidos requiere acuerdo escrito entre las partes y no puede realizarse a través de la Plataforma.</div>
+</div>
+
+${compromiso.notas ? `<div class="section"><div class="section-title">NOTAS DE LA OPERACIÓN</div><div class="info-box"><p>${compromiso.notas}</p></div></div>` : ''}
 
 <div class="signatures">
   <div class="signature-box">
-    <div class="signature-line"><strong>${bancoLabel}</strong><br><small>Firma y Sello</small></div>
+    <div class="signature-line">
+      <strong>Banco ${bancoLabel}</strong><br>
+      <small>Firma Preliminar de ${bancoRep}</small>
+    </div>
   </div>
   <div class="signature-box">
-    <div class="signature-line"><strong>${compromiso.cliente_entidad || 'EL CLIENTE'}</strong><br><small>Firma y Sello</small></div>
+    <div class="signature-line">
+      <strong>Cliente ${compromiso.cliente_entidad || '—'}</strong><br>
+      <small>Firma Preliminar de ${compromiso.cliente_nombre || '—'}</small>
+    </div>
   </div>
 </div>
 
+<div class="disclaimer">
+  <strong>Declaración Importante (Descargo de Responsabilidad):</strong> Este documento preliminar ha sido generado automáticamente por FundLinkAI de buena fe, como facilitador tecnológico neutral. <strong>No constituye un contrato vinculante, no capta fondos ni realiza intermediación financiera</strong> (conforme al Artículo 3, Ley de Bancos y Grupos Financieros, Decreto 19-2002). La ejecución, validez y cumplimiento dependen exclusivamente del Banco y el Cliente, sin responsabilidad alguna para FUNDLINK, que actúa como facilitador tecnológico neutral. Autorizado preliminarmente por ${bancoRep} y ${compromiso.cliente_nombre || '—'} bajo las condiciones descritas, sin responsabilidad para FundLink AI o la Plataforma, que actúa de buena fe. <strong>Requiere firma física de un contrato definitivo entre las partes para tener validez legal.</strong> FundLink AI no asume responsabilidad por incumplimientos, fraudes o disputas derivadas de esta propuesta.
+</div>
+
 <div class="footer">
-  <p>Documento generado por FUNDLinkAI — ${verifyUrl}</p>
-  <p>Documento preliminar. Ejecución sujeta a firma física y desembolso confirmado.</p>
+  <p>Generado por FUNDLink AI — Sistema de Subastas Financieras</p>
+  <p>${verifyUrl}</p>
 </div>
 </body></html>`
 
