@@ -31,7 +31,7 @@ import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { Button } from './components/common/Button'
 
-type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'colocaciones' | 'nueva-colocacion'
+type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'solicitudes' | 'nueva-solicitud'
 type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion' | 'colocaciones'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones'
 type Page = ClientePage | BancoPage | WebAdminPage
@@ -129,6 +129,18 @@ function App() {
             Dashboard
           </Button>
           <Button
+            variant={currentPage === 'solicitudes' || currentPage === 'nueva-solicitud' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('solicitudes')}
+          >
+            Solicitudes
+          </Button>
+          <Button
+            variant={currentPage === 'nueva-solicitud' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('nueva-solicitud')}
+          >
+            Nuevas Solicitudes
+          </Button>
+          <Button
             variant={currentPage === 'nueva-subasta' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('nueva-subasta')}
           >
@@ -140,7 +152,7 @@ function App() {
           >
             Mis Subastas
           </Button>
-          <Button 
+          <Button
             variant={currentPage === 'historial' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('historial')}
           >
@@ -157,12 +169,6 @@ function App() {
             onClick={() => setCurrentPage('vencimientos')}
           >
             Vencimientos
-          </Button>
-          <Button
-            variant={currentPage === 'colocaciones' || currentPage === 'nueva-colocacion' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('colocaciones')}
-          >
-            Colocaciones
           </Button>
           <Button
             variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
@@ -292,10 +298,10 @@ function App() {
           return <ClienteCompromisos />
         case 'vencimientos':
           return <ClienteVencimientos />
-        case 'colocaciones':
-          return <ClienteSolicitudesColocacion onNueva={() => setCurrentPage('nueva-colocacion')} />
-        case 'nueva-colocacion':
-          return <NuevaSolicitudColocacion onCreada={() => setCurrentPage('colocaciones')} />
+        case 'solicitudes':
+          return <ClienteSolicitudesColocacion onNueva={() => setCurrentPage('nueva-solicitud')} />
+        case 'nueva-solicitud':
+          return <NuevaSolicitudColocacion onCreada={() => setCurrentPage('solicitudes')} />
         case 'configuracion':
           return <ClienteConfiguracion />
         default:

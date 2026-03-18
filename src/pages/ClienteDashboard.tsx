@@ -428,7 +428,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
             { icon: '💰', label: 'Nueva Subasta',   sub: 'Solicitar colocación',    page: 'nueva-subasta' },
             { icon: '📋', label: 'Compromisos',      sub: 'Ver contratos vigentes',  page: 'compromisos'  },
             { icon: '📅', label: 'Vencimientos',     sub: 'Calendario y flujos',     page: 'vencimientos' },
-            { icon: '🏦', label: 'Colocaciones',     sub: 'Solicitudes directas',    page: 'colocaciones' },
+            { icon: '🏦', label: 'Solicitudes',       sub: 'Solicitudes directas',    page: 'solicitudes'  },
             { icon: '📊', label: 'Mis Subastas',     sub: 'Ver subastas activas',    page: 'subastas'     },
             { icon: '📁', label: 'Historial',        sub: 'Subastas finalizadas',    page: 'historial'    },
           ].map(({ icon, label, sub, page }) => (
