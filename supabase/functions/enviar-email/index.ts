@@ -1,550 +1,451 @@
 /**
- * FUNDLINK: Edge Function para Envío de Emails
+ * FUNDLINK — Edge Function: enviar-email
  *
- * Usa Resend para enviar emails transaccionales.
- * Soporta múltiples tipos de notificaciones.
+ * Envía emails transaccionales vía Resend.
+ * Acepta `destinatario_id` (UUID) o `destinatario.email` directo.
  *
- * Configurar en Supabase:
- * supabase secrets set RESEND_API_KEY=re_xxxxx
+ * Secrets requeridos:
+ *   supabase secrets set RESEND_API_KEY=re_xxxxx
+ *   supabase secrets set SUPABASE_URL=https://xxx.supabase.co
+ *   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=eyJ...
  *
- * Deploy: supabase functions deploy enviar-email
+ * Deploy:
+ *   supabase functions deploy enviar-email
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Tipos de notificación soportados
+const FROM_EMAIL = 'FundLink <notificaciones@fundlink.app>'
+const APP_URL    = 'https://app.fundlink.app'
+
+// ── Tipos ────────────────────────────────────────────────────────────────────
 type TipoNotificacion =
-  | 'nueva_oferta'           // Banco envió oferta → notificar cliente
-  | 'oferta_adjudicada'      // Cliente adjudicó → notificar banco
-  | 'subasta_cerrada'        // Subasta cerró → notificar participantes
-  | 'compromiso_creado'      // Nuevo compromiso → notificar ambas partes
-  | 'compromiso_por_vencer'  // Vence en X días → notificar cliente
-  | 'nueva_subasta'          // Nueva subasta → notificar bancos invitados
-  | 'documento_aprobado'     // KYC aprobado → notificar cliente
-  | 'documento_rechazado'    // KYC rechazado → notificar cliente
-  | 'cuenta_aprobada'        // Cuenta aprobada → notificar cliente
+  // ── Subastas ──
+  | 'nueva_oferta'                  // Banco envió oferta en subasta → cliente
+  | 'oferta_adjudicada'             // Cliente adjudicó → banco ganador
+  | 'subasta_cerrada'               // Subasta cerrada → cliente
+  | 'nueva_subasta'                 // Nueva subasta disponible → bancos invitados
+  // ── Colocaciones ──
+  | 'oferta_colocacion_recibida'    // Banco envió oferta en colocación → cliente
+  | 'oferta_pendiente_aprobacion'   // Banco mesa envió oferta → banco_admin para aprobar
+  | 'oferta_aprobada_mesa'          // Banco admin aprobó oferta de mesa → banco_mesa
+  | 'oferta_rechazada_mesa'         // Banco admin rechazó oferta de mesa → banco_mesa
+  // ── Compromisos ──
+  | 'compromiso_creado'             // Alias legacy
+  | 'compromiso_confirmado'         // Compromiso creado/confirmado → cliente + banco
+  | 'compromiso_ejecutado'          // Banco ejecutó (desembolsó) → cliente
+  | 'compromiso_por_vencer'         // Alerta X días antes del vencimiento → cliente
+  // ── KYC / Admin ──
+  | 'documento_aprobado'
+  | 'documento_rechazado'
+  | 'cuenta_aprobada'
 
 interface EmailRequest {
   tipo: TipoNotificacion
-  destinatario: {
-    email: string
-    nombre: string
-  }
+  /** UUID del usuario destinatario — la función busca su email automáticamente */
+  destinatario_id?: string
+  /** Alternativa: pasar email+nombre directamente */
+  destinatario?: { email: string; nombre: string }
   datos: Record<string, unknown>
 }
 
-// Plantillas de email
-const plantillas: Record<TipoNotificacion, (datos: Record<string, unknown>) => { subject: string; html: string }> = {
+// ── Helpers de estilo ────────────────────────────────────────────────────────
+const baseStyle = `
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; color: #1a1a2e; margin: 0; padding: 0; }
+  .wrapper { background: #f4f6f9; padding: 32px 16px; }
+  .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .header { background: linear-gradient(135deg, #1e3a8a 0%, #6366f1 100%); padding: 32px; text-align: center; }
+  .logo-text { font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: -1px; }
+  .logo-ai { color: #60a5fa; }
+  .badge { display: inline-block; padding: 6px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-top: 12px; }
+  .body { padding: 36px 32px; }
+  h2 { margin: 0 0 8px; font-size: 22px; color: #1e3a8a; }
+  p { margin: 0 0 16px; line-height: 1.7; color: #374151; }
+  .card { background: #f0f4ff; border-left: 4px solid #6366f1; border-radius: 8px; padding: 20px 24px; margin: 24px 0; }
+  .card-warn { background: #fff7ed; border-left-color: #f59e0b; }
+  .card-success { background: #f0fdf4; border-left-color: #22c55e; }
+  .card-danger { background: #fef2f2; border-left-color: #ef4444; }
+  .card p { margin: 6px 0; font-size: 15px; }
+  .card .label { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card .value { font-size: 18px; font-weight: 700; color: #1e3a8a; }
+  .big-number { font-size: 56px; font-weight: 900; text-align: center; padding: 16px 0; }
+  .btn { display: inline-block; background: #6366f1; color: #ffffff !important; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px; margin-top: 8px; }
+  .footer { background: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb; }
+  .footer p { font-size: 12px; color: #9ca3af; margin: 4px 0; }
+`
 
-  nueva_oferta: (datos) => ({
-    subject: `Nueva oferta recibida - ${datos.monto} ${datos.moneda}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .content { line-height: 1.6; }
-          .highlight { background: #1a1a3e; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00d4ff; }
-          .value { font-size: 24px; font-weight: bold; color: #00ff88; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-          </div>
-          <div class="content">
-            <h2>¡Nueva oferta recibida!</h2>
-            <p>Hola ${datos.cliente_nombre},</p>
-            <p>Has recibido una nueva oferta en tu subasta:</p>
+const layout = (badge: string, badgeColor: string, inner: string) => `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><style>${baseStyle}</style></head>
+<body>
+<div class="wrapper">
+  <div class="container">
+    <div class="header">
+      <div class="logo-text">FUNDLINK<span class="logo-ai">AI</span></div>
+      <div class="badge" style="background:${badgeColor};color:#fff">${badge}</div>
+    </div>
+    <div class="body">${inner}</div>
+    <div class="footer">
+      <p>Este es un mensaje automático de FundLinkAI. Por favor no responder a este correo.</p>
+      <p>© ${new Date().getFullYear()} FundLinkAI · Plataforma de Subastas Financieras</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>`
 
-            <div class="highlight">
-              <p><strong>Banco:</strong> ${datos.banco_nombre}</p>
-              <p><strong>Monto:</strong> ${datos.monto} ${datos.moneda}</p>
-              <p><strong>Tasa ofrecida:</strong> <span class="value">${datos.tasa}%</span></p>
-              <p><strong>Plazo:</strong> ${datos.plazo} días</p>
-            </div>
+const btn = (url: string, label = 'Abrir Plataforma') =>
+  `<p style="text-align:center;margin-top:28px"><a href="${url}" class="btn">${label}</a></p>`
 
-            <p>Ingresa a la plataforma para revisar todas las ofertas y adjudicar.</p>
+// ── Plantillas ───────────────────────────────────────────────────────────────
+const plantillas: Record<TipoNotificacion, (d: Record<string, unknown>) => { subject: string; html: string }> = {
 
-            <a href="${datos.url_plataforma}" class="button">Ver Ofertas</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink. No responder a este correo.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  // ── SUBASTAS ────────────────────────────────────────────────────────────────
+
+  nueva_oferta: (d) => ({
+    subject: `💰 Nueva oferta recibida — ${d.monto} ${d.moneda} al ${d.tasa}%`,
+    html: layout('NUEVA OFERTA', '#6366f1', `
+      <h2>¡Recibiste una nueva oferta!</h2>
+      <p>Hola <strong>${d.cliente_nombre}</strong>, un banco ha enviado una propuesta en tu subasta:</p>
+      <div class="card">
+        <p><span class="label">Banco</span><br><span class="value">${d.banco_nombre}</span></p>
+        <p><span class="label">Monto ofrecido</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa</span><br><span class="value">${d.tasa}% anual</span></p>
+        <p><span class="label">Plazo</span><br><span class="value">${d.plazo} días</span></p>
+      </div>
+      <p>Ingresa a la plataforma para comparar todas las ofertas y seleccionar la mejor opción.</p>
+      ${btn(d.url_plataforma as string, 'Ver Ofertas')}
+    `)
   }),
 
-  oferta_adjudicada: (datos) => ({
-    subject: `¡Felicidades! Tu oferta fue adjudicada - OP-${datos.op_id}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .success-badge { background: #00ff88; color: #000; padding: 10px 20px; border-radius: 20px; display: inline-block; font-weight: bold; }
-          .highlight { background: #1a1a3e; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00ff88; }
-          .value { font-size: 24px; font-weight: bold; color: #00ff88; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-            <div class="success-badge">ADJUDICADO</div>
-          </div>
-          <div class="content">
-            <h2>¡Tu oferta fue adjudicada!</h2>
-            <p>Hola ${datos.banco_nombre},</p>
-            <p>Excelentes noticias. Tu oferta ha sido seleccionada por el cliente.</p>
-
-            <div class="highlight">
-              <p><strong>Operación:</strong> OP-${datos.op_id}</p>
-              <p><strong>Cliente:</strong> ${datos.cliente_nombre}</p>
-              <p><strong>Monto:</strong> ${datos.monto} ${datos.moneda}</p>
-              <p><strong>Tasa:</strong> <span class="value">${datos.tasa}%</span></p>
-              <p><strong>Vencimiento:</strong> ${datos.fecha_vencimiento}</p>
-            </div>
-
-            <p>El compromiso ha sido registrado en la plataforma.</p>
-
-            <a href="${datos.url_plataforma}" class="button">Ver Compromiso</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink. No responder a este correo.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  oferta_adjudicada: (d) => ({
+    subject: `🎉 ¡Tu oferta fue seleccionada! — ${d.op_id}`,
+    html: layout('ADJUDICADO', '#22c55e', `
+      <h2>¡Tu oferta fue seleccionada!</h2>
+      <p>Hola <strong>${d.banco_nombre}</strong>, el cliente ha elegido tu propuesta:</p>
+      <div class="card card-success">
+        <p><span class="label">Operación</span><br><span class="value">${d.op_id}</span></p>
+        <p><span class="label">Cliente</span><br><span class="value">${d.cliente_nombre}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa</span><br><span class="value">${d.tasa}%</span></p>
+        <p><span class="label">Vencimiento</span><br><span class="value">${d.fecha_vencimiento}</span></p>
+      </div>
+      <p>El compromiso ha sido registrado. Coordina el desembolso con el cliente.</p>
+      ${btn(d.url_plataforma as string, 'Ver Compromiso')}
+    `)
   }),
 
-  subasta_cerrada: (datos) => ({
-    subject: `Subasta cerrada - ${datos.monto} ${datos.moneda}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .highlight { background: #1a1a3e; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-          </div>
-          <div class="content">
-            <h2>Subasta Cerrada</h2>
-            <p>La subasta ha finalizado.</p>
-
-            <div class="highlight">
-              <p><strong>Monto:</strong> ${datos.monto} ${datos.moneda}</p>
-              <p><strong>Total ofertas:</strong> ${datos.total_ofertas}</p>
-              <p><strong>Estado:</strong> ${datos.estado}</p>
-            </div>
-
-            <a href="${datos.url_plataforma}" class="button">Ver Detalles</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  subasta_cerrada: (d) => ({
+    subject: `Subasta cerrada — ${d.monto} ${d.moneda}`,
+    html: layout('SUBASTA CERRADA', '#6b7280', `
+      <h2>Tu subasta ha cerrado</h2>
+      <div class="card">
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Ofertas recibidas</span><br><span class="value">${d.total_ofertas}</span></p>
+        <p><span class="label">Estado</span><br><span class="value">${d.estado}</span></p>
+      </div>
+      ${btn(d.url_plataforma as string, 'Ver Detalles')}
+    `)
   }),
 
-  compromiso_creado: (datos) => ({
-    subject: `Nuevo compromiso registrado - OP-${datos.op_id}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .highlight { background: #1a1a3e; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00d4ff; }
-          .value { font-size: 20px; font-weight: bold; color: #00ff88; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-          </div>
-          <div class="content">
-            <h2>Compromiso Registrado</h2>
-            <p>Se ha creado un nuevo compromiso financiero.</p>
-
-            <div class="highlight">
-              <p><strong>Operación:</strong> <span class="value">OP-${datos.op_id}</span></p>
-              <p><strong>Monto:</strong> ${datos.monto} ${datos.moneda}</p>
-              <p><strong>Tasa:</strong> ${datos.tasa}%</p>
-              <p><strong>Fecha inicio:</strong> ${datos.fecha_inicio}</p>
-              <p><strong>Fecha vencimiento:</strong> ${datos.fecha_vencimiento}</p>
-            </div>
-
-            <p>Puedes descargar el contrato PDF desde la plataforma.</p>
-
-            <a href="${datos.url_plataforma}" class="button">Ver Compromiso</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  nueva_subasta: (d) => ({
+    subject: `🏦 Nueva oportunidad — ${d.monto} ${d.moneda} · ${d.plazo} días`,
+    html: layout('NUEVA SUBASTA', '#3b82f6', `
+      <h2>Nueva oportunidad de inversión</h2>
+      <p>Hola <strong>${d.banco_nombre}</strong>, has sido invitado a participar:</p>
+      <div class="card">
+        <p><span class="label">Cliente</span><br><span class="value">${d.cliente_nombre}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Plazo</span><br><span class="value">${d.plazo} días</span></p>
+        <p><span class="label">Tipo</span><br><span class="value">${d.tipo_subasta}</span></p>
+        <p><span class="label">Cierra en</span><br><span class="value">${d.duracion} horas</span></p>
+      </div>
+      <p><strong>¡Envía tu oferta antes de que cierre!</strong></p>
+      ${btn(d.url_plataforma as string, 'Participar Ahora')}
+    `)
   }),
 
-  compromiso_por_vencer: (datos) => ({
-    subject: `⚠️ Compromiso por vencer en ${datos.dias_restantes} días - OP-${datos.op_id}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .warning { background: #ff6b35; color: #000; padding: 10px 20px; border-radius: 20px; display: inline-block; font-weight: bold; }
-          .highlight { background: #3a1a1a; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff6b35; }
-          .days { font-size: 48px; font-weight: bold; color: #ff6b35; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-            <div class="warning">PRÓXIMO A VENCER</div>
-          </div>
-          <div class="content">
-            <h2>Compromiso por Vencer</h2>
+  // ── COLOCACIONES ────────────────────────────────────────────────────────────
 
-            <div class="highlight" style="text-align: center;">
-              <div class="days">${datos.dias_restantes}</div>
-              <p>días restantes</p>
-            </div>
-
-            <p><strong>Operación:</strong> OP-${datos.op_id}</p>
-            <p><strong>Banco:</strong> ${datos.banco_nombre}</p>
-            <p><strong>Monto:</strong> ${datos.monto} ${datos.moneda}</p>
-            <p><strong>Fecha vencimiento:</strong> ${datos.fecha_vencimiento}</p>
-
-            <p>Recuerda coordinar la renovación o liquidación con tu banco.</p>
-
-            <a href="${datos.url_plataforma}" class="button">Ver Compromiso</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  oferta_colocacion_recibida: (d) => ({
+    subject: `💼 Nueva oferta de colocación — ${d.tasa}% · ${d.monto} ${d.moneda}`,
+    html: layout('OFERTA DE COLOCACIÓN', '#8b5cf6', `
+      <h2>Recibiste una oferta de colocación</h2>
+      <p>Hola <strong>${d.cliente_nombre}</strong>, un banco ha respondido a tu solicitud de colocación directa:</p>
+      <div class="card">
+        <p><span class="label">Banco</span><br><span class="value">${d.banco_nombre}</span></p>
+        <p><span class="label">Monto propuesto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa en firme</span><br><span class="value">${d.tasa}% anual</span></p>
+        <p><span class="label">Plazo</span><br><span class="value">${d.plazo} días</span></p>
+        ${d.notas ? `<p><span class="label">Notas del banco</span><br>${d.notas}</p>` : ''}
+      </div>
+      <p>Ingresa a la plataforma para revisar y aceptar la oferta.</p>
+      ${btn(d.url_plataforma as string, 'Ver Oferta')}
+    `)
   }),
 
-  nueva_subasta: (datos) => ({
-    subject: `Nueva oportunidad de inversión - ${datos.monto} ${datos.moneda}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .new-badge { background: #00d4ff; color: #000; padding: 10px 20px; border-radius: 20px; display: inline-block; font-weight: bold; }
-          .highlight { background: #1a1a3e; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00d4ff; }
-          .value { font-size: 24px; font-weight: bold; color: #00ff88; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .timer { background: #ff6b35; color: #000; padding: 5px 15px; border-radius: 4px; font-weight: bold; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-            <div class="new-badge">NUEVA SUBASTA</div>
-          </div>
-          <div class="content">
-            <h2>Nueva Oportunidad de Inversión</h2>
-            <p>Hola ${datos.banco_nombre},</p>
-            <p>Has sido invitado a participar en una nueva subasta:</p>
-
-            <div class="highlight">
-              <p><strong>Cliente:</strong> ${datos.cliente_nombre}</p>
-              <p><strong>Monto:</strong> <span class="value">${datos.monto} ${datos.moneda}</span></p>
-              <p><strong>Plazo:</strong> ${datos.plazo} días</p>
-              <p><strong>Tipo:</strong> ${datos.tipo_subasta}</p>
-              <p><strong>Cierra en:</strong> <span class="timer">${datos.duracion} horas</span></p>
-            </div>
-
-            <p>¡No pierdas esta oportunidad! Envía tu oferta antes de que cierre.</p>
-
-            <a href="${datos.url_plataforma}" class="button">Participar Ahora</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  oferta_pendiente_aprobacion: (d) => ({
+    subject: `⏳ Oferta de colocación pendiente de aprobación`,
+    html: layout('PENDIENTE APROBACIÓN', '#f59e0b', `
+      <h2>Oferta de mesa pendiente de revisión</h2>
+      <p>Un banco de mesa ha enviado una oferta que requiere tu aprobación:</p>
+      <div class="card card-warn">
+        <p><span class="label">Banco Mesa</span><br><span class="value">${d.banco_mesa_nombre}</span></p>
+        <p><span class="label">Cliente</span><br><span class="value">${d.cliente_nombre}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa propuesta</span><br><span class="value">${d.tasa}%</span></p>
+      </div>
+      <p>Revisa y aprueba o rechaza la oferta en la sección de Aprobaciones.</p>
+      ${btn(d.url_plataforma as string, 'Ir a Aprobaciones')}
+    `)
   }),
 
-  documento_aprobado: (datos) => ({
-    subject: `✅ Documento aprobado - ${datos.tipo_documento}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .success { background: #00ff88; color: #000; padding: 10px 20px; border-radius: 20px; display: inline-block; font-weight: bold; }
-          .highlight { background: #1a3a1a; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00ff88; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-            <div class="success">APROBADO</div>
-          </div>
-          <div class="content">
-            <h2>Documento Aprobado</h2>
-            <p>Hola ${datos.cliente_nombre},</p>
-            <p>Tu documento ha sido revisado y aprobado.</p>
-
-            <div class="highlight">
-              <p><strong>Documento:</strong> ${datos.tipo_documento}</p>
-              <p><strong>Archivo:</strong> ${datos.nombre_archivo}</p>
-              <p><strong>Fecha aprobación:</strong> ${datos.fecha_aprobacion}</p>
-            </div>
-
-            <a href="${datos.url_plataforma}" class="button">Ver Documentos</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  oferta_aprobada_mesa: (d) => ({
+    subject: `✅ Tu oferta de colocación fue aprobada`,
+    html: layout('OFERTA APROBADA', '#22c55e', `
+      <h2>¡Tu oferta fue aprobada!</h2>
+      <p>Hola <strong>${d.banco_mesa_nombre}</strong>, el administrador ha aprobado tu oferta de colocación. Ya es visible para el cliente.</p>
+      <div class="card card-success">
+        <p><span class="label">Cliente</span><br><span class="value">${d.cliente_nombre}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa</span><br><span class="value">${d.tasa}%</span></p>
+      </div>
+      ${btn(d.url_plataforma as string, 'Ver Estado')}
+    `)
   }),
 
-  documento_rechazado: (datos) => ({
-    subject: `❌ Documento requiere corrección - ${datos.tipo_documento}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .rejected { background: #ff4444; color: #fff; padding: 10px 20px; border-radius: 20px; display: inline-block; font-weight: bold; }
-          .highlight { background: #3a1a1a; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff4444; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-            <div class="rejected">REQUIERE CORRECCIÓN</div>
-          </div>
-          <div class="content">
-            <h2>Documento Rechazado</h2>
-            <p>Hola ${datos.cliente_nombre},</p>
-            <p>Tu documento ha sido revisado y requiere correcciones.</p>
-
-            <div class="highlight">
-              <p><strong>Documento:</strong> ${datos.tipo_documento}</p>
-              <p><strong>Motivo:</strong> ${datos.motivo_rechazo}</p>
-            </div>
-
-            <p>Por favor, sube un nuevo documento corregido.</p>
-
-            <a href="${datos.url_plataforma}" class="button">Subir Documento</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  oferta_rechazada_mesa: (d) => ({
+    subject: `❌ Tu oferta de colocación fue rechazada`,
+    html: layout('OFERTA RECHAZADA', '#ef4444', `
+      <h2>Tu oferta no fue aprobada</h2>
+      <p>Hola <strong>${d.banco_mesa_nombre}</strong>, el administrador ha rechazado tu oferta de colocación.</p>
+      <div class="card card-danger">
+        <p><span class="label">Cliente</span><br><span class="value">${d.cliente_nombre}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa propuesta</span><br><span class="value">${d.tasa}%</span></p>
+      </div>
+      <p>Puedes enviar una nueva oferta ajustada si lo consideras conveniente.</p>
+      ${btn(d.url_plataforma as string, 'Ver Colocaciones')}
+    `)
   }),
 
-  cuenta_aprobada: (datos) => ({
-    subject: `🎉 ¡Bienvenido a FundLink! Tu cuenta ha sido aprobada`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #ffffff; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #12122a; border-radius: 12px; padding: 30px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: bold; color: #00d4ff; }
-          .welcome { font-size: 48px; margin: 20px 0; }
-          .highlight { background: #1a1a3e; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .button { display: inline-block; background: #00d4ff; color: #000; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">FundLink</div>
-            <div class="welcome">🎉</div>
-          </div>
-          <div class="content">
-            <h2>¡Bienvenido a FundLink!</h2>
-            <p>Hola ${datos.cliente_nombre},</p>
-            <p>Tu cuenta ha sido aprobada. Ya puedes comenzar a crear subastas y recibir ofertas de financiamiento.</p>
+  // ── COMPROMISOS ─────────────────────────────────────────────────────────────
 
-            <div class="highlight">
-              <h3>¿Qué puedes hacer ahora?</h3>
-              <ul>
-                <li>Crear tu primera subasta</li>
-                <li>Configurar tus bancos preferidos</li>
-                <li>Subir documentos adicionales</li>
-              </ul>
-            </div>
+  compromiso_creado: (d) => ({   // legacy alias
+    subject: `📋 Compromiso registrado — ${d.op_id}`,
+    html: layout('COMPROMISO CONFIRMADO', '#6366f1', `
+      <h2>Compromiso registrado</h2>
+      <p>Se ha generado un nuevo compromiso financiero en la plataforma:</p>
+      <div class="card">
+        <p><span class="label">Operación</span><br><span class="value">${d.op_id}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa</span><br><span class="value">${d.tasa}% anual</span></p>
+        <p><span class="label">Fecha inicio</span><br><span class="value">${d.fecha_inicio}</span></p>
+        <p><span class="label">Fecha vencimiento</span><br><span class="value">${d.fecha_vencimiento}</span></p>
+      </div>
+      <p>Puedes descargar la Constancia de Intención de Colocación (PDF) desde la plataforma.</p>
+      ${btn(d.url_plataforma as string, 'Ver Compromiso')}
+    `)
+  }),
 
-            <a href="${datos.url_plataforma}" class="button">Comenzar</a>
-          </div>
-          <div class="footer">
-            <p>Este es un mensaje automático de FundLink.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+  compromiso_confirmado: (d) => ({
+    subject: `📋 Nuevo compromiso confirmado — ${d.op_id} · ${d.monto} ${d.moneda}`,
+    html: layout('COMPROMISO CONFIRMADO', '#6366f1', `
+      <h2>Compromiso confirmado</h2>
+      <p>Hola <strong>${d.destinatario_nombre}</strong>, se ha confirmado el siguiente compromiso financiero:</p>
+      <div class="card">
+        <p><span class="label">Operación</span><br><span class="value">${d.op_id}</span></p>
+        <p><span class="label">Contraparte</span><br><span class="value">${d.contraparte}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa</span><br><span class="value">${d.tasa}% anual</span></p>
+        <p><span class="label">Plazo</span><br><span class="value">${d.plazo} días</span></p>
+        <p><span class="label">Fecha inicio</span><br><span class="value">${d.fecha_inicio}</span></p>
+        <p><span class="label">Fecha vencimiento</span><br><span class="value">${d.fecha_vencimiento}</span></p>
+      </div>
+      <p>El contrato preliminar está disponible para descarga en la plataforma.</p>
+      ${btn(d.url_plataforma as string, 'Ver Compromiso')}
+    `)
+  }),
+
+  compromiso_ejecutado: (d) => ({
+    subject: `✅ Desembolso confirmado — ${d.op_id}`,
+    html: layout('DESEMBOLSO EJECUTADO', '#22c55e', `
+      <h2>¡Desembolso confirmado!</h2>
+      <p>Hola <strong>${d.cliente_nombre}</strong>, el banco ha confirmado la ejecución (desembolso) del siguiente compromiso:</p>
+      <div class="card card-success">
+        <p><span class="label">Operación</span><br><span class="value">${d.op_id}</span></p>
+        <p><span class="label">Banco</span><br><span class="value">${d.banco_nombre}</span></p>
+        <p><span class="label">Monto desembolsado</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa</span><br><span class="value">${d.tasa}%</span></p>
+        <p><span class="label">Fecha ejecución</span><br><span class="value">${d.fecha_ejecucion}</span></p>
+        <p><span class="label">Vencimiento</span><br><span class="value">${d.fecha_vencimiento}</span></p>
+      </div>
+      <p>Puedes descargar el Certificado de Ejecución desde la plataforma.</p>
+      ${btn(d.url_plataforma as string, 'Ver Certificado')}
+    `)
+  }),
+
+  compromiso_por_vencer: (d) => ({
+    subject: `⚠️ Compromiso vence en ${d.dias_restantes} días — ${d.op_id}`,
+    html: layout('PRÓXIMO A VENCER', '#f59e0b', `
+      <h2>Aviso de Vencimiento</h2>
+      <p>Hola <strong>${d.cliente_nombre}</strong>, uno de tus compromisos está próximo a vencer:</p>
+      <div class="big-number" style="color:#f59e0b">${d.dias_restantes}</div>
+      <p style="text-align:center;color:#6b7280;margin-top:-12px">días restantes</p>
+      <div class="card card-warn">
+        <p><span class="label">Operación</span><br><span class="value">${d.op_id}</span></p>
+        <p><span class="label">Banco</span><br><span class="value">${d.banco_nombre}</span></p>
+        <p><span class="label">Monto</span><br><span class="value">${d.monto} ${d.moneda}</span></p>
+        <p><span class="label">Tasa</span><br><span class="value">${d.tasa}%</span></p>
+        <p><span class="label">Fecha vencimiento</span><br><span class="value">${d.fecha_vencimiento}</span></p>
+      </div>
+      <p>Recuerda coordinar con tu banco la renovación o liquidación.</p>
+      ${btn(d.url_plataforma as string, 'Ver Calendario')}
+    `)
+  }),
+
+  // ── KYC / ADMIN ─────────────────────────────────────────────────────────────
+
+  documento_aprobado: (d) => ({
+    subject: `✅ Documento aprobado — ${d.tipo_documento}`,
+    html: layout('DOCUMENTO APROBADO', '#22c55e', `
+      <h2>Documento aprobado</h2>
+      <p>Hola <strong>${d.cliente_nombre}</strong>, tu documento ha sido revisado y aprobado.</p>
+      <div class="card card-success">
+        <p><span class="label">Tipo de documento</span><br><span class="value">${d.tipo_documento}</span></p>
+        <p><span class="label">Archivo</span><br>${d.nombre_archivo}</p>
+        <p><span class="label">Fecha aprobación</span><br>${d.fecha_aprobacion}</p>
+      </div>
+      ${btn(d.url_plataforma as string, 'Ver Documentos')}
+    `)
+  }),
+
+  documento_rechazado: (d) => ({
+    subject: `❌ Documento requiere corrección — ${d.tipo_documento}`,
+    html: layout('REQUIERE CORRECCIÓN', '#ef4444', `
+      <h2>Documento con observaciones</h2>
+      <p>Hola <strong>${d.cliente_nombre}</strong>, tu documento ha sido revisado y requiere correcciones.</p>
+      <div class="card card-danger">
+        <p><span class="label">Documento</span><br><span class="value">${d.tipo_documento}</span></p>
+        <p><span class="label">Motivo</span><br>${d.motivo_rechazo}</p>
+      </div>
+      <p>Por favor sube una versión corregida del documento.</p>
+      ${btn(d.url_plataforma as string, 'Subir Documento')}
+    `)
+  }),
+
+  cuenta_aprobada: (d) => ({
+    subject: `🎉 ¡Bienvenido a FundLinkAI! Tu cuenta está activa`,
+    html: layout('CUENTA APROBADA', '#6366f1', `
+      <h2>¡Bienvenido a FundLinkAI!</h2>
+      <p>Hola <strong>${d.cliente_nombre}</strong>, tu cuenta ha sido aprobada y ya puedes comenzar a operar.</p>
+      <div class="card">
+        <p>✔ Crear subastas de fondos</p>
+        <p>✔ Recibir ofertas de bancos</p>
+        <p>✔ Gestionar compromisos y vencimientos</p>
+        <p>✔ Solicitar colocaciones directas</p>
+      </div>
+      ${btn(d.url_plataforma as string, 'Comenzar')}
+    `)
   }),
 }
 
+// ── Main handler ─────────────────────────────────────────────────────────────
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY no configurada')
-    }
+    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY no configurada')
 
-    const { tipo, destinatario, datos }: EmailRequest = await req.json()
+    const body: EmailRequest = await req.json()
+    const { tipo, datos, destinatario_id, destinatario: destinatarioDirecto } = body
 
-    // Validar tipo de notificación
+    // Validar tipo
     if (!plantillas[tipo]) {
       return new Response(
-        JSON.stringify({ error: `Tipo de notificación no válido: ${tipo}` }),
+        JSON.stringify({ error: `Tipo no válido: ${tipo}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Validar destinatario
-    if (!destinatario?.email) {
+    // Resolver destinatario
+    let email: string
+    let nombre: string
+
+    if (destinatario_id) {
+      // Buscar usuario en Supabase usando service role
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      )
+      const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('email, nombre, entidad')
+        .eq('id', destinatario_id)
+        .single()
+
+      if (userError || !userData) {
+        return new Response(
+          JSON.stringify({ error: `Usuario no encontrado: ${destinatario_id}` }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      email  = userData.email
+      nombre = userData.nombre || userData.entidad || 'Usuario'
+    } else if (destinatarioDirecto?.email) {
+      email  = destinatarioDirecto.email
+      nombre = destinatarioDirecto.nombre || 'Usuario'
+    } else {
       return new Response(
-        JSON.stringify({ error: 'Email de destinatario requerido' }),
+        JSON.stringify({ error: 'Se requiere destinatario_id o destinatario.email' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Agregar URL de plataforma por defecto
+    // Generar email con datos completos
     const datosCompletos = {
       ...datos,
-      url_plataforma: datos.url_plataforma || 'https://fundlink.app'
+      destinatario_nombre: nombre,
+      url_plataforma: (datos.url_plataforma as string) || APP_URL,
     }
-
-    // Generar contenido del email
     const { subject, html } = plantillas[tipo](datosCompletos)
 
-    // Enviar email via Resend
-    const response = await fetch('https://api.resend.com/emails', {
+    // Enviar vía Resend
+    const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: 'FundLink <notificaciones@fundlink.app>',
-        to: [destinatario.email],
-        subject: subject,
-        html: html,
-      }),
+      body: JSON.stringify({ from: FROM_EMAIL, to: [email], subject, html }),
     })
 
-    const result = await response.json()
-
-    if (!response.ok) {
-      console.error('Error Resend:', result)
+    const result = await resendRes.json()
+    if (!resendRes.ok) {
+      console.error('Resend error:', result)
       throw new Error(result.message || 'Error enviando email')
     }
 
+    console.log(`[enviar-email] ✓ ${tipo} → ${email} (id: ${result.id})`)
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Email enviado exitosamente',
-        id: result.id
-      }),
+      JSON.stringify({ success: true, id: result.id }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Error en enviar-email:', error)
+    console.error('[enviar-email] Error:', error)
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Error interno'
-      }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Error interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

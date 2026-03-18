@@ -24,9 +24,11 @@ export const ClienteSubastas: React.FC = () => {
   const [loadingOfertas, setLoadingOfertas] = useState(false)
   const [aprobando, setAprobando] = useState<Record<string, boolean>>({})
 
+  const ahora = new Date()
   const misSubastas = subastas.filter(s =>
     s.cliente?.entidad === user?.entidad &&
-    !['cerrada', 'cancelada', 'expirada'].includes(s.estado)
+    !['cerrada', 'cancelada', 'expirada'].includes(s.estado) &&
+    new Date(s.expires_at) >= ahora
   )
 
   // Cargar ofertas para cada subasta

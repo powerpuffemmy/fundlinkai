@@ -46,7 +46,14 @@ export const HistorialSubastas: React.FC = () => {
     }
   }
 
-  const getEstadoBadge = (estado: string) => {
+  const getEstadoBadge = (subasta: Subasta) => {
+    const ahora = new Date()
+    // Si el expires_at pasó y la subasta no fue cerrada/cancelada, mostrar como expirada
+    const estadoEfectivo =
+      ['abierta', 'esperando'].includes(subasta.estado) && new Date(subasta.expires_at) < ahora
+        ? 'expirada'
+        : subasta.estado
+
     const badges: Record<string, { class: string; label: string }> = {
       abierta: { class: 'bg-green-900/20 border-green-900/50 text-green-200', label: 'Abierta' },
       esperando: { class: 'bg-blue-900/20 border-blue-900/50 text-blue-200', label: 'Esperando' },
@@ -54,7 +61,7 @@ export const HistorialSubastas: React.FC = () => {
       cancelada: { class: 'bg-red-900/20 border-red-900/50 text-red-200', label: 'Cancelada' },
       expirada: { class: 'bg-yellow-900/20 border-yellow-900/50 text-yellow-200', label: 'Expirada' }
     }
-    return badges[estado] || badges.abierta
+    return badges[estadoEfectivo] || badges.cerrada
   }
 
   if (loading) {
@@ -130,7 +137,7 @@ export const HistorialSubastas: React.FC = () => {
               </thead>
               <tbody>
                 {subastas.map(subasta => {
-                  const badge = getEstadoBadge(subasta.estado)
+                  const badge = getEstadoBadge(subasta)
                   
                   return (
                     <tr key={subasta.id} className="border-b border-[var(--line)] hover:bg-white/5">

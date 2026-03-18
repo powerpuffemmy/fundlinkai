@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Oferta } from '@/types/database'
 import { useAuthStore } from '@/store/authStore'
+import { notifNuevaOferta, notifOfertaAdjudicada } from '@/lib/notificaciones'
 
 // Extender el tipo Oferta para incluir datos de la subasta y cliente
 interface OfertaConDetalles extends Oferta {
@@ -82,6 +83,25 @@ export const useOfertas = (subastaId?: string) => {
         p_detalle: `Oferta a tasa ${oferta.tasa}%`,
         p_metadata: { oferta_id: data.id, subasta_id: oferta.subasta_id }
       })
+
+      // Notificar al cliente (fire-and-forget)
+      try {
+        const { data: sub } = await supabase
+          .from('subastas')
+          .select('cliente_id, monto, moneda, plazo, cliente:users!cliente_id(nombre, entidad)')
+          .eq('id', oferta.subasta_id)
+          .single()
+        if (sub?.cliente_id) {
+          notifNuevaOferta(sub.cliente_id, {
+            cliente_nombre: (sub.cliente as any)?.entidad || (sub.cliente as any)?.nombre || 'Cliente',
+            banco_nombre: user.entidad || user.nombre || 'Banco',
+            monto: sub.monto,
+            moneda: sub.moneda,
+            tasa: oferta.tasa,
+            plazo: sub.plazo,
+          })
+        }
+      } catch { /* no bloquear */ }
 
       await fetchOfertas()
       return data

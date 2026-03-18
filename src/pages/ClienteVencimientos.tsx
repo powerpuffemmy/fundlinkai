@@ -1,4 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine
+} from 'recharts'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { useAuthStore } from '@/store/authStore'
@@ -44,29 +47,34 @@ export const ClienteVencimientos: React.FC = () => {
   const [mesesAdelante, setMesesAdelante] = useState(3)
 
   // Cargar compromisos con nombres de banco resueltos (mismo RPC que ClienteCompromisos)
-  useEffect(() => {
-    const cargar = async () => {
-      if (!user) return
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .rpc('obtener_compromisos_usuario', { p_user_id: user.id })
-        if (error) throw error
-        setCompromisos((data || []) as CompromisoConBanco[])
-      } catch (error) {
-        console.error('Error cargando compromisos:', error)
-      } finally {
-        setLoading(false)
-      }
+  const cargar = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .rpc('obtener_compromisos_usuario', { p_user_id: user.id })
+      if (error) throw error
+      setCompromisos((data || []) as CompromisoConBanco[])
+    } catch (error) {
+      console.error('Error cargando compromisos:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     cargar()
   }, [user?.id])
 
-  // Solo compromisos vigentes
+  // Compromisos activos (vigente + ejecutado + confirmado)
   const vigentes = useMemo(() =>
-    compromisos.filter(c => c.estado === 'vigente'),
+    compromisos.filter(c => ['vigente', 'ejecutado', 'confirmado'].includes(c.estado)),
     [compromisos]
   )
+
+  // Parsear fecha de vencimiento en hora LOCAL (evita desfase UTC)
+  const parseFechaVenc = (fv: string) =>
+    new Date(fv.length === 10 ? fv + 'T00:00:00' : fv)
 
   // Resolver nombre de contraparte
   const getNombreContraparte = (c: CompromisoConBanco): string => {
@@ -101,7 +109,7 @@ export const ClienteVencimientos: React.FC = () => {
         const label = `${startStr} - ${endStr}`
 
         const comps = vigentes.filter(c => {
-          const fv = new Date(c.fecha_vencimiento)
+          const fv = parseFechaVenc(c.fecha_vencimiento)
           return fv >= start && fv <= end
         }).map(c => ({
           id: c.id,
@@ -134,7 +142,7 @@ export const ClienteVencimientos: React.FC = () => {
           .replace(/^\w/, c => c.toUpperCase())
 
         const comps = vigentes.filter(c => {
-          const fv = new Date(c.fecha_vencimiento)
+          const fv = parseFechaVenc(c.fecha_vencimiento)
           return fv >= start && fv <= end
         }).map(c => ({
           id: c.id,
@@ -177,11 +185,11 @@ export const ClienteVencimientos: React.FC = () => {
     const totalPortafolio = totalGTQ + totalUSD * GTQ_PER_USD
 
     const vencer7 = vigentes.filter(c => {
-      const fv = new Date(c.fecha_vencimiento)
+      const fv = parseFechaVenc(c.fecha_vencimiento)
       return fv >= hoy && fv <= en7dias
     })
     const vencer30 = vigentes.filter(c => {
-      const fv = new Date(c.fecha_vencimiento)
+      const fv = parseFechaVenc(c.fecha_vencimiento)
       return fv >= hoy && fv <= en30dias
     })
 
@@ -196,6 +204,102 @@ export const ClienteVencimientos: React.FC = () => {
       vencer30GTQ, vencer30USD, vencer30Total: vencer30GTQ + vencer30USD * GTQ_PER_USD
     }
   }, [vigentes])
+
+  // ── Chart 1: Total portafolio + vencimientos por mes (12 meses) ──────────
+  const datosGrafica1 = useMemo(() => {
+    const hoy = new Date()
+    const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    const puntos: { label: string; total: number; isFirst: boolean }[] = []
+
+    // Primera columna = total portafolio
+    puntos.push({ label: 'Portafolio', total: totales.totalPortafolio, isFirst: true })
+
+    for (let i = 0; i < 12; i++) {
+      const mesDate = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1)
+      const mesEnd  = new Date(hoy.getFullYear(), hoy.getMonth() + i + 1, 0)
+      const total   = vigentes
+        .filter(c => {
+          const fv = parseFechaVenc(c.fecha_vencimiento)
+          return fv >= mesDate && fv <= mesEnd
+        })
+        .reduce((s, c) => s + (c.moneda === 'GTQ' ? c.monto : c.monto * GTQ_PER_USD), 0)
+
+      const labelMes = MESES[mesDate.getMonth()]
+      const labelYear = mesDate.getFullYear() !== hoy.getFullYear()
+        ? ` ${mesDate.getFullYear().toString().slice(2)}`
+        : ''
+      puntos.push({ label: labelMes + labelYear, total, isFirst: false })
+    }
+    return puntos
+  }, [vigentes, totales.totalPortafolio])
+
+  // ── Chart 2: Total del mes actual + vencimientos por semana ──────────────
+  const datosGrafica2 = useMemo(() => {
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    const mesStart = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    const mesEnd   = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+
+    const totalMes = vigentes
+      .filter(c => {
+        const fv = parseFechaVenc(c.fecha_vencimiento)
+        return fv >= mesStart && fv <= mesEnd
+      })
+      .reduce((s, c) => s + (c.moneda === 'GTQ' ? c.monto : c.monto * GTQ_PER_USD), 0)
+
+    const puntos: { label: string; total: number; isFirst: boolean }[] = [
+      { label: 'Total Mes', total: totalMes, isFirst: true }
+    ]
+
+    // Semanas del mes actual
+    const cursor = new Date(mesStart)
+    const diaInicio = cursor.getDay()
+    const diffLunes = diaInicio === 0 ? -6 : 1 - diaInicio
+    cursor.setDate(cursor.getDate() + diffLunes)
+    // Ajustar para que el cursor no quede antes del inicio del mes
+    if (cursor < mesStart) cursor.setDate(cursor.getDate())
+
+    let semNum = 1
+    while (cursor <= mesEnd) {
+      const semStart = new Date(Math.max(cursor.getTime(), mesStart.getTime()))
+      const semEnd   = new Date(cursor)
+      semEnd.setDate(semEnd.getDate() + 6)
+      const semEndCapped = new Date(Math.min(semEnd.getTime(), mesEnd.getTime()))
+
+      const totalSem = vigentes
+        .filter(c => {
+          const fv = parseFechaVenc(c.fecha_vencimiento)
+          return fv >= semStart && fv <= semEndCapped
+        })
+        .reduce((s, c) => s + (c.moneda === 'GTQ' ? c.monto : c.monto * GTQ_PER_USD), 0)
+
+      const dStr = semStart.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+      puntos.push({ label: `Sem ${semNum}\n${dStr}`, total: totalSem, isFirst: false })
+
+      cursor.setDate(cursor.getDate() + 7)
+      semNum++
+      if (semNum > 6) break
+    }
+    return puntos
+  }, [vigentes])
+
+  // ── Tooltip personalizado ─────────────────────────────────────────────────
+  const TooltipMonto = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    return (
+      <div className="bg-[#1a1f2e] border border-white/10 rounded px-3 py-2 text-sm shadow-lg">
+        <div className="font-semibold text-white mb-1">{label}</div>
+        <div className="text-green-300">{formatMoney(payload[0]?.value ?? 0, 'GTQ')}</div>
+      </div>
+    )
+  }
+
+  // ── Formateador eje Y ─────────────────────────────────────────────────────
+  const fmtY = (v: number) => {
+    if (v >= 1_000_000) return `Q${(v / 1_000_000).toFixed(1)}M`
+    if (v >= 1_000) return `Q${(v / 1_000).toFixed(0)}K`
+    return `Q${v}`
+  }
 
   // Maximo monto para las barras proporcionales
   const maxMonto = useMemo(() => {
@@ -239,6 +343,13 @@ export const ClienteVencimientos: React.FC = () => {
           >
             Mensual
           </Button>
+          <Button
+            variant="secondary"
+            onClick={cargar}
+            disabled={loading}
+          >
+            ↻ Actualizar
+          </Button>
         </div>
       </div>
 
@@ -269,6 +380,90 @@ export const ClienteVencimientos: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* ── Gráfica 1: Portafolio total + vencimientos mensuales 12 meses ── */}
+      <Card>
+        <h3 className="font-bold mb-1">Vencimientos Mensuales — 12 Meses</h3>
+        <p className="text-xs text-[var(--muted)] mb-4">
+          Primera columna: total del portafolio vigente. Columnas siguientes: monto que vence cada mes.
+        </p>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={datosGrafica1} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barCategoryGap="20%">
+            <XAxis
+              dataKey="label"
+              tick={{ fill: '#9ca3af', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tickFormatter={fmtY}
+              tick={{ fill: '#9ca3af', fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              width={64}
+            />
+            <Tooltip content={<TooltipMonto />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+            <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+              {datosGrafica1.map((entry, idx) => (
+                <Cell
+                  key={idx}
+                  fill={entry.isFirst ? '#6366f1' : entry.total > 0 ? '#22c55e' : '#374151'}
+                  fillOpacity={entry.total > 0 ? 0.85 : 0.3}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="flex gap-4 mt-2 text-xs text-[var(--muted)]">
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} />Total Portafolio</div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#22c55e' }} />Vencimiento mensual</div>
+        </div>
+      </Card>
+
+      {/* ── Gráfica 2: Total mes actual + vencimientos por semana ── */}
+      <Card>
+        <h3 className="font-bold mb-1">Vencimientos por Semana — Mes Actual</h3>
+        <p className="text-xs text-[var(--muted)] mb-4">
+          Primera columna: total que vence en el mes en curso. Columnas siguientes: desglose semanal.
+        </p>
+        {datosGrafica2.every(d => d.total === 0) ? (
+          <p className="text-[var(--muted)] text-sm text-center py-8">
+            No hay vencimientos en el mes actual.
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={datosGrafica2} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barCategoryGap="20%">
+              <XAxis
+                dataKey="label"
+                tick={{ fill: '#9ca3af', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={fmtY}
+                tick={{ fill: '#9ca3af', fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+                width={64}
+              />
+              <Tooltip content={<TooltipMonto />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                {datosGrafica2.map((entry, idx) => (
+                  <Cell
+                    key={idx}
+                    fill={entry.isFirst ? '#f59e0b' : entry.total > 0 ? '#60a5fa' : '#374151'}
+                    fillOpacity={entry.total > 0 ? 0.85 : 0.3}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+        <div className="flex gap-4 mt-2 text-xs text-[var(--muted)]">
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#f59e0b' }} />Total del Mes</div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#60a5fa' }} />Vencimiento semanal</div>
+        </div>
+      </Card>
 
       {/* Selector de horizonte */}
       <div className="flex gap-2 items-center">

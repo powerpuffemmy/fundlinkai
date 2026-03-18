@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Compromiso, Moneda } from '@/types/database'
 import { useAuthStore } from '@/store/authStore'
+import { notifCompromisoConfirmado, notifCompromisoEjecutado } from '@/lib/notificaciones'
 
 // Extender el tipo Compromiso para incluir los datos relacionados
 interface CompromisoConDetalles extends Compromiso {
@@ -85,6 +86,41 @@ export const useCompromisos = () => {
         p_metadata: { compromiso_id: data.id }
       })
 
+      // Notificaciones (fire-and-forget)
+      try {
+        const bancoNombre   = data.banco?.entidad || data.banco?.nombre || 'Banco'
+        const clienteNombre = data.cliente?.entidad || data.cliente?.nombre || 'Cliente'
+        const fechaVencStr  = (compromiso.fecha_vencimiento as string || '').split('T')[0]
+        const fechaInicioStr = (compromiso.fecha_inicio as string || '').split('T')[0]
+
+        // Notificar al cliente
+        notifCompromisoConfirmado(compromiso.cliente_id, {
+          destinatario_nombre: clienteNombre,
+          contraparte: bancoNombre,
+          op_id: data.op_id,
+          monto: compromiso.monto,
+          moneda: compromiso.moneda,
+          tasa: compromiso.tasa,
+          plazo: compromiso.plazo,
+          fecha_inicio: fechaInicioStr,
+          fecha_vencimiento: fechaVencStr,
+        })
+        // Notificar al banco (si aplica)
+        if (compromiso.banco_id) {
+          notifCompromisoConfirmado(compromiso.banco_id, {
+            destinatario_nombre: bancoNombre,
+            contraparte: clienteNombre,
+            op_id: data.op_id,
+            monto: compromiso.monto,
+            moneda: compromiso.moneda,
+            tasa: compromiso.tasa,
+            plazo: compromiso.plazo,
+            fecha_inicio: fechaInicioStr,
+            fecha_vencimiento: fechaVencStr,
+          })
+        }
+      } catch { /* no bloquear */ }
+
       await fetchCompromisos()
       return data
     } catch (error) {
@@ -114,6 +150,23 @@ export const useCompromisos = () => {
         p_detalle: `Compromiso ${id} marcado como EJECUTADO — desembolso confirmado`,
         p_metadata: { compromiso_id: id }
       })
+
+      // Notificar al cliente: desembolso ejecutado (fire-and-forget)
+      try {
+        const comp = compromisos.find(c => c.id === id)
+        if (comp?.cliente_id) {
+          notifCompromisoEjecutado(comp.cliente_id, {
+            cliente_nombre: comp.cliente?.entidad || comp.cliente?.nombre || 'Cliente',
+            banco_nombre: comp.banco?.entidad || comp.banco?.nombre || 'Banco',
+            op_id: comp.op_id,
+            monto: comp.monto,
+            moneda: comp.moneda,
+            tasa: comp.tasa,
+            fecha_ejecucion: new Date().toLocaleDateString('es-GT'),
+            fecha_vencimiento: comp.fecha_vencimiento.split('T')[0],
+          })
+        }
+      } catch { /* no bloquear */ }
 
       await fetchCompromisos()
     } catch (error) {

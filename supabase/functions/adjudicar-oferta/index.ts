@@ -212,7 +212,38 @@ serve(async (req) => {
         }
       })
 
-    // 18. Respuesta exitosa
+    // 18. Enviar notificaciones por email (fire-and-forget)
+    try {
+      const edgeUrl = Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '') + '/functions/v1/enviar-email'
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+      // Obtener nombres de cliente y banco
+      const { data: clienteData } = await supabaseAdmin.from('users').select('nombre,entidad').eq('id', oferta.subasta.cliente_id).single()
+      const { data: bancoData }   = await supabaseAdmin.from('users').select('nombre,entidad').eq('id', oferta.banco_id).single()
+
+      const clienteNombre = clienteData?.entidad || clienteData?.nombre || 'Cliente'
+      const bancoNombre   = bancoData?.entidad   || bancoData?.nombre   || 'Banco'
+      const fechaVencStr  = fechaVencimiento.toISOString().split('T')[0]
+      const fechaInicioStr = fechaInicio.toISOString().split('T')[0]
+
+      const headers = { 'Content-Type': 'application/json', 'apikey': anonKey, 'Authorization': `Bearer ${anonKey}` }
+
+      // Notificar al banco: oferta adjudicada
+      await fetch(edgeUrl, { method: 'POST', headers, body: JSON.stringify({
+        tipo: 'oferta_adjudicada',
+        destinatario_id: oferta.banco_id,
+        datos: { banco_nombre: bancoNombre, cliente_nombre: clienteNombre, op_id: opId, monto: oferta.subasta.monto, moneda: oferta.subasta.moneda, tasa: oferta.tasa, fecha_vencimiento: fechaVencStr }
+      })}).catch(() => {})
+
+      // Notificar al cliente: compromiso confirmado
+      await fetch(edgeUrl, { method: 'POST', headers, body: JSON.stringify({
+        tipo: 'compromiso_confirmado',
+        destinatario_id: oferta.subasta.cliente_id,
+        datos: { destinatario_nombre: clienteNombre, contraparte: bancoNombre, op_id: opId, monto: oferta.subasta.monto, moneda: oferta.subasta.moneda, tasa: oferta.tasa, plazo: oferta.subasta.plazo, fecha_inicio: fechaInicioStr, fecha_vencimiento: fechaVencStr }
+      })}).catch(() => {})
+    } catch { /* no bloquear la respuesta */ }
+
+    // 19. Respuesta exitosa
     return new Response(
       JSON.stringify({
         success: true,

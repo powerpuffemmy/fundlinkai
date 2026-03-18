@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import type { SolicitudColocacion, OfertaColocacion, Moneda } from '@/types/database'
+import {
+  notifOfertaColocacionRecibida,
+  notifOfertaPendienteAdmin,
+  notifOfertaAdjudicada,
+  notifCompromisoConfirmado,
+} from '@/lib/notificaciones'
 
 interface SolicitudConOfertas extends SolicitudColocacion {
   ofertas?: OfertaColocacion[]
@@ -158,6 +164,41 @@ export const useSolicitudesColocacion = () => {
       .single()
 
     if (error) throw error
+
+    // Notificaciones (fire-and-forget)
+    try {
+      const sol = solicitudes.find(s => s.id === datos.solicitud_id)
+      if (aprobada_por_admin) {
+        // Admin auto-aprueba → notificar cliente
+        if (sol?.cliente_id) {
+          notifOfertaColocacionRecibida(sol.cliente_id, {
+            cliente_nombre: 'Cliente',
+            banco_nombre: user.entidad || user.nombre || 'Banco',
+            monto: datos.monto,
+            moneda: (sol.moneda as string) || 'GTQ',
+            tasa: datos.tasa,
+            plazo: sol.plazo,
+            notas: datos.notas,
+          })
+        }
+      } else {
+        // Mesa → notificar a banco_admin del mismo banco
+        const { data: admins } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'banco_admin')
+        ;(admins || []).forEach(a => {
+          notifOfertaPendienteAdmin(a.id, {
+            banco_mesa_nombre: user.entidad || user.nombre || 'Banco Mesa',
+            cliente_nombre: (sol as any)?.cliente?.entidad || 'Cliente',
+            monto: datos.monto,
+            moneda: (sol?.moneda as string) || 'GTQ',
+            tasa: datos.tasa,
+          })
+        })
+      }
+    } catch { /* no bloquear */ }
+
     await fetchSolicitudes()
     return data as OfertaColocacion
   }
@@ -215,6 +256,51 @@ export const useSolicitudesColocacion = () => {
           notas: `Colocación directa. Solicitud: ${solicitud.id}`
         }])
       if (e4) throw e4
+
+      // Notificaciones (fire-and-forget)
+      try {
+        const fechaVencStr = fechaVencimiento.toISOString().split('T')[0]
+        const fechaInicioStr = fechaInicio.toISOString().split('T')[0]
+        const clienteNombre = 'Cliente'
+        const bancoNombre   = 'Banco'
+
+        // Notificar al banco: su oferta fue aceptada
+        notifOfertaAdjudicada(oferta.banco_id, {
+          banco_nombre: bancoNombre,
+          cliente_nombre: clienteNombre,
+          op_id: opId,
+          monto: oferta.monto,
+          moneda: solicitud.moneda,
+          tasa: oferta.tasa,
+          fecha_vencimiento: fechaVencStr,
+        })
+
+        // Notificar al cliente: compromiso confirmado
+        notifCompromisoConfirmado(user.id, {
+          destinatario_nombre: clienteNombre,
+          contraparte: bancoNombre,
+          op_id: opId,
+          monto: oferta.monto,
+          moneda: solicitud.moneda,
+          tasa: oferta.tasa,
+          plazo: solicitud.plazo,
+          fecha_inicio: fechaInicioStr,
+          fecha_vencimiento: fechaVencStr,
+        })
+
+        // Notificar al banco: compromiso confirmado
+        notifCompromisoConfirmado(oferta.banco_id, {
+          destinatario_nombre: bancoNombre,
+          contraparte: clienteNombre,
+          op_id: opId,
+          monto: oferta.monto,
+          moneda: solicitud.moneda,
+          tasa: oferta.tasa,
+          plazo: solicitud.plazo,
+          fecha_inicio: fechaInicioStr,
+          fecha_vencimiento: fechaVencStr,
+        })
+      } catch { /* no bloquear */ }
     }
 
     await fetchSolicitudes()

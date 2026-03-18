@@ -1,12 +1,22 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { LogoUploader } from '@/components/banco/LogoUploader'
 import { useClienteBancoLimites } from '@/hooks/useClienteBancoLimites'
+import { useDocumentosKYC } from '@/hooks/useDocumentosKYC'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/lib/utils'
+import type { TipoDocumentoKYC } from '@/types/database'
+
+const TIPOS_DOCUMENTO: { value: TipoDocumentoKYC; label: string }[] = [
+  { value: 'cedula', label: 'Cédula o DPI' },
+  { value: 'rtu', label: 'RTU' },
+  { value: 'patente', label: 'Patente de Comercio' },
+  { value: 'estados_financieros', label: 'Estados Financieros' },
+  { value: 'otro', label: 'Otro documento' }
+]
 
 export const ClienteConfiguracion: React.FC = () => {
   const { user, setUser } = useAuthStore()
@@ -17,12 +27,24 @@ export const ClienteConfiguracion: React.FC = () => {
     actualizarLimite,
     obtenerTodosBancos
   } = useClienteBancoLimites()
+  const { documentos, loading: loadingDocs, subirDocumento, eliminarDocumento } = useDocumentosKYC()
 
   const [bancosDisponibles, setBancosDisponibles] = useState<any[]>([])
   const [editando, setEditando] = useState<Record<string, boolean>>({})
   const [valoresTemp, setValoresTemp] = useState<Record<string, string>>({})
   const [guardando, setGuardando] = useState<Record<string, boolean>>({})
   const [logoUrl, setLogoUrl] = useState<string | undefined>(user?.logo_url)
+
+  // Datos personales editables
+  const [editandoPerfil, setEditandoPerfil] = useState(false)
+  const [nombreTemp, setNombreTemp] = useState(user?.nombre || '')
+  const [telefonoTemp, setTelefonoTemp] = useState(user?.telefono || '')
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false)
+
+  // KYC upload
+  const [tipoDocSelected, setTipoDocSelected] = useState<TipoDocumentoKYC>('cedula')
+  const [subiendoDoc, setSubiendoDoc] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setLogoUrl(user?.logo_url)
@@ -125,6 +147,54 @@ export const ClienteConfiguracion: React.FC = () => {
     }
   }
 
+  const handleGuardarPerfil = async () => {
+    if (!user) return
+    try {
+      setGuardandoPerfil(true)
+      const { error } = await supabase
+        .from('users')
+        .update({ nombre: nombreTemp.trim(), telefono: telefonoTemp.trim() })
+        .eq('id', user.id)
+      if (error) throw error
+      setUser({ ...user, nombre: nombreTemp.trim(), telefono: telefonoTemp.trim() })
+      setEditandoPerfil(false)
+      alert('Datos actualizados exitosamente')
+    } catch (error) {
+      console.error('Error actualizando perfil:', error)
+      alert('Error al actualizar los datos')
+    } finally {
+      setGuardandoPerfil(false)
+    }
+  }
+
+  const handleSubirDocumento = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const archivo = e.target.files?.[0]
+    if (!archivo) return
+    try {
+      setSubiendoDoc(true)
+      const result = await subirDocumento(tipoDocSelected, archivo)
+      if (!result.success) throw new Error(result.error)
+      alert('Documento subido exitosamente. Quedará pendiente de revisión.')
+    } catch (error: any) {
+      alert('Error al subir el documento: ' + (error.message || ''))
+    } finally {
+      setSubiendoDoc(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleEliminarDocumento = async (id: string) => {
+    if (!confirm('¿Eliminar este documento?')) return
+    const result = await eliminarDocumento(id)
+    if (!result.success) alert('Error al eliminar: ' + result.error)
+  }
+
+  const getDocEstadoBadge = (estado: string) => {
+    if (estado === 'aprobado') return 'bg-green-900/20 text-green-300 border-green-900/40'
+    if (estado === 'rechazado') return 'bg-red-900/20 text-red-300 border-red-900/40'
+    return 'bg-yellow-900/20 text-yellow-300 border-yellow-900/40'
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -148,7 +218,22 @@ export const ClienteConfiguracion: React.FC = () => {
       {/* Información del Cliente + Logo */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <h3 className="font-bold text-lg mb-4">Información de la Empresa</h3>
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="font-bold text-lg">Información de la Empresa</h3>
+            {!editandoPerfil && (
+              <Button
+                variant="small"
+                className="text-xs"
+                onClick={() => {
+                  setNombreTemp(user?.nombre || '')
+                  setTelefonoTemp(user?.telefono || '')
+                  setEditandoPerfil(true)
+                }}
+              >
+                Editar
+              </Button>
+            )}
+          </div>
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-[var(--muted)] mb-1">Entidad</label>
@@ -159,11 +244,55 @@ export const ClienteConfiguracion: React.FC = () => {
               <div className="font-semibold">{user?.email}</div>
             </div>
             <div>
+              <label className="block text-sm text-[var(--muted)] mb-1">Nombre de Contacto</label>
+              {editandoPerfil ? (
+                <Input
+                  value={nombreTemp}
+                  onChange={e => setNombreTemp(e.target.value)}
+                  placeholder="Nombre completo"
+                />
+              ) : (
+                <div className="font-semibold">{user?.nombre || '—'}</div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--muted)] mb-1">Teléfono</label>
+              {editandoPerfil ? (
+                <Input
+                  value={telefonoTemp}
+                  onChange={e => setTelefonoTemp(e.target.value)}
+                  placeholder="+502 XXXX-XXXX"
+                />
+              ) : (
+                <div className="font-semibold">{user?.telefono || '—'}</div>
+              )}
+            </div>
+            <div>
               <label className="block text-sm text-[var(--muted)] mb-1">Rol</label>
               <div className="font-semibold capitalize">
                 {user?.role === 'cliente_admin' ? 'Administrador' : 'Usuario'}
               </div>
             </div>
+            {editandoPerfil && (
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="primary"
+                  className="text-sm"
+                  onClick={handleGuardarPerfil}
+                  disabled={guardandoPerfil}
+                >
+                  {guardandoPerfil ? 'Guardando...' : 'Guardar'}
+                </Button>
+                <Button
+                  variant="small"
+                  className="text-sm"
+                  onClick={() => setEditandoPerfil(false)}
+                  disabled={guardandoPerfil}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -341,6 +470,105 @@ export const ClienteConfiguracion: React.FC = () => {
           </div>
         </Card>
       )}
+
+      {/* ── SECCIÓN KYC ──────────────────────────────────────────────── */}
+      <Card>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="font-bold text-lg">Documentos KYC</h3>
+            <p className="text-sm text-[var(--muted)] mt-0.5">
+              Know Your Client — Documentos de identidad y cumplimiento
+            </p>
+          </div>
+          {user?.role === 'cliente_admin' && (
+            <div className="flex items-center gap-2">
+              <select
+                value={tipoDocSelected}
+                onChange={e => setTipoDocSelected(e.target.value as TipoDocumentoKYC)}
+                className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-white"
+              >
+                {TIPOS_DOCUMENTO.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <Button
+                variant="primary"
+                className="text-xs"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={subiendoDoc}
+              >
+                {subiendoDoc ? 'Subiendo...' : '+ Subir'}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={handleSubirDocumento}
+              />
+            </div>
+          )}
+        </div>
+
+        {loadingDocs ? (
+          <p className="text-[var(--muted)] text-sm">Cargando documentos...</p>
+        ) : documentos.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-[var(--muted)] text-sm">No hay documentos KYC subidos aún.</p>
+            {user?.role === 'cliente_admin' && (
+              <p className="text-xs text-blue-400 mt-2">
+                Sube los documentos requeridos para completar tu perfil KYC.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {documentos.map(doc => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-lg">
+                    {doc.tipo_documento === 'cedula' ? '🪪' :
+                     doc.tipo_documento === 'rtu' ? '📋' :
+                     doc.tipo_documento === 'patente' ? '📜' :
+                     doc.tipo_documento === 'estados_financieros' ? '📊' : '📄'}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate">
+                      {TIPOS_DOCUMENTO.find(t => t.value === doc.tipo_documento)?.label || doc.tipo_documento}
+                    </div>
+                    <div className="text-xs text-[var(--muted)] truncate">{doc.nombre_archivo}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded border ${getDocEstadoBadge(doc.estado)}`}>
+                    {doc.estado === 'aprobado' ? 'Aprobado' :
+                     doc.estado === 'rechazado' ? 'Rechazado' : 'Pendiente'}
+                  </span>
+                  <a
+                    href={doc.url_archivo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    Ver
+                  </a>
+                  {doc.estado === 'pendiente' && user?.role === 'cliente_admin' && (
+                    <button
+                      onClick={() => handleEliminarDocumento(doc.id)}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {/* Información */}
       <Card className="bg-blue-900/10 border-blue-900/30">
