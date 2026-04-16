@@ -84,24 +84,28 @@ export const useOfertas = (subastaId?: string) => {
         p_metadata: { oferta_id: data.id, subasta_id: oferta.subasta_id }
       })
 
-      // Notificar al cliente (fire-and-forget)
-      try {
-        const { data: sub } = await supabase
-          .from('subastas')
-          .select('cliente_id, monto, moneda, plazo, cliente:users!cliente_id(nombre, entidad)')
-          .eq('id', oferta.subasta_id)
-          .single()
-        if (sub?.cliente_id) {
-          notifNuevaOferta(sub.cliente_id, {
-            cliente_nombre: (sub.cliente as any)?.entidad || (sub.cliente as any)?.nombre || 'Cliente',
-            banco_nombre: user.entidad || user.nombre || 'Banco',
-            monto: sub.monto,
-            moneda: sub.moneda,
-            tasa: oferta.tasa,
-            plazo: sub.plazo,
-          })
-        }
-      } catch { /* no bloquear */ }
+      // Notificar al cliente solo si la oferta ya está aprobada (banco_admin auto-aprueba).
+      // Las ofertas de banco_mesa quedan pendientes de aprobación del admin; el cliente
+      // se notificará cuando el admin apruebe, no antes.
+      if (oferta.aprobada_por_admin) {
+        try {
+          const { data: sub } = await supabase
+            .from('subastas')
+            .select('cliente_id, monto, moneda, plazo, cliente:users!cliente_id(nombre, entidad)')
+            .eq('id', oferta.subasta_id)
+            .single()
+          if (sub?.cliente_id) {
+            notifNuevaOferta(sub.cliente_id, {
+              cliente_nombre: (sub.cliente as any)?.entidad || (sub.cliente as any)?.nombre || 'Cliente',
+              banco_nombre: user.entidad || user.nombre || 'Banco',
+              monto: sub.monto,
+              moneda: sub.moneda,
+              tasa: oferta.tasa,
+              plazo: sub.plazo,
+            })
+          }
+        } catch { /* no bloquear */ }
+      }
 
       await fetchOfertas()
       return data

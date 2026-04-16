@@ -118,7 +118,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
       }
 
       if (bancos.length === 0) {
-        setError('No hay bancos configurados. Verifica tu configuración de límites.')
+        setError('No se encontraron bancos disponibles. Verifica que tengas bancos configurados en Configuración → Límites de Bancos.')
         setLoading(false)
         return
       }

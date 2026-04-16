@@ -95,6 +95,48 @@ export const useClienteBancoLimites = () => {
     }
   }
 
+  // ── Fallback: construir BancoDisponible[] desde cliente_banco_limites ───────
+  const _fallbackLimitesDirectos = async (): Promise<BancoDisponible[]> => {
+    if (!user) return []
+    try {
+      const { data, error } = await supabase
+        .from('cliente_banco_limites')
+        .select('banco_id, limite_monto, monto_utilizado, activo, banco:users!banco_id(id, nombre, entidad)')
+        .eq('cliente_id', user.id)
+        .eq('activo', true)
+
+      if (error || !data || data.length === 0) {
+        // Último recurso: todos los banco_admin activos
+        const { data: bancosData } = await supabase
+          .from('users')
+          .select('id, nombre, entidad')
+          .eq('role', 'banco_admin')
+          .eq('activo', true)
+        return (bancosData || []).map((b: any) => ({
+          banco_id: b.id,
+          banco_nombre: b.entidad || b.nombre || b.id,
+          banco_entidad: b.entidad || '',
+          limite_monto: 0,
+          monto_utilizado: 0,
+          monto_disponible: 0,
+          todos_user_ids: [b.id],
+        }))
+      }
+
+      return (data || []).map((l: any) => ({
+        banco_id: l.banco_id,
+        banco_nombre: (l.banco as any)?.entidad || (l.banco as any)?.nombre || l.banco_id,
+        banco_entidad: (l.banco as any)?.entidad || '',
+        limite_monto: l.limite_monto ?? 0,
+        monto_utilizado: l.monto_utilizado ?? 0,
+        monto_disponible: (l.limite_monto ?? 0) - (l.monto_utilizado ?? 0),
+        todos_user_ids: [l.banco_id],
+      }))
+    } catch {
+      return []
+    }
+  }
+
   // Obtener bancos disponibles para un monto específico
   const obtenerBancosDisponibles = async (monto: number): Promise<BancoDisponible[]> => {
     try {
@@ -106,25 +148,32 @@ export const useClienteBancoLimites = () => {
           p_monto: monto
         })
 
-      if (error) throw error
-      return data || []
+      // Si el RPC funciona y devuelve datos, usarlos
+      if (!error && data && data.length > 0) return data as BancoDisponible[]
+
+      // Fallback: consulta directa, filtrar client-side por monto disponible
+      const todos = await _fallbackLimitesDirectos()
+      return todos.filter(b => b.monto_disponible >= monto || b.limite_monto === 0)
     } catch (error) {
       console.error('Error obteniendo bancos disponibles:', error)
-      return []
+      return _fallbackLimitesDirectos()
     }
   }
 
-  // Obtener todos los bancos activos (para configuración inicial)
-  const obtenerTodosBancos = async () => {
+  // Obtener todos los bancos activos del cliente
+  const obtenerTodosBancos = async (): Promise<BancoDisponible[]> => {
     try {
       const { data, error } = await supabase
         .rpc('obtener_todos_bancos')
 
-      if (error) throw error
-      return data || []
+      // Si el RPC funciona y devuelve datos, usarlos
+      if (!error && data && data.length > 0) return data as BancoDisponible[]
+
+      // Fallback: consulta directa
+      return _fallbackLimitesDirectos()
     } catch (error) {
       console.error('Error obteniendo bancos:', error)
-      return []
+      return _fallbackLimitesDirectos()
     }
   }
 

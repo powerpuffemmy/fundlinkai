@@ -129,16 +129,16 @@ function App() {
             Dashboard
           </Button>
           <Button
-            variant={currentPage === 'solicitudes' || currentPage === 'nueva-solicitud' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('solicitudes')}
-          >
-            Solicitudes
-          </Button>
-          <Button
             variant={currentPage === 'nueva-solicitud' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('nueva-solicitud')}
           >
-            Nuevas Solicitudes
+            Nueva Solicitud
+          </Button>
+          <Button
+            variant={currentPage === 'solicitudes' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('solicitudes')}
+          >
+            Mis Solicitudes
           </Button>
           <Button
             variant={currentPage === 'nueva-subasta' ? 'primary' : 'secondary'}
@@ -299,7 +299,7 @@ function App() {
         case 'vencimientos':
           return <ClienteVencimientos />
         case 'solicitudes':
-          return <ClienteSolicitudesColocacion onNueva={() => setCurrentPage('nueva-solicitud')} />
+          return <ClienteSolicitudesColocacion />
         case 'nueva-solicitud':
           return <NuevaSolicitudColocacion onCreada={() => setCurrentPage('solicitudes')} />
         case 'configuracion':

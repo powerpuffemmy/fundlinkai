@@ -105,18 +105,11 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Solicitudes de Colocación</h2>
-          <p className="text-[var(--muted)] mt-1">
-            Gestiona tus solicitudes y las ofertas recibidas
-          </p>
-        </div>
-        {onNueva && (
-          <Button variant="primary" onClick={onNueva}>
-            + Nueva Solicitud
-          </Button>
-        )}
+      <div>
+        <h2 className="text-2xl font-bold">Mis Solicitudes de Colocación</h2>
+        <p className="text-[var(--muted)] mt-1">
+          Gestiona tus solicitudes y las ofertas recibidas de los bancos
+        </p>
       </div>
 
       {solicitudes.length === 0 ? (
@@ -124,12 +117,7 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
           <div className="text-center py-12 text-[var(--muted)]">
             <div className="text-4xl mb-3">📋</div>
             <p className="font-semibold mb-1">Sin solicitudes aún</p>
-            <p className="text-sm">Crea una solicitud de colocación para recibir propuestas de los bancos.</p>
-            {onNueva && (
-              <Button variant="primary" className="mt-4" onClick={onNueva}>
-                Crear Primera Solicitud
-              </Button>
-            )}
+            <p className="text-sm">Usa <strong>Nueva Solicitud</strong> en el menú para enviar una solicitud a los bancos.</p>
           </div>
         </Card>
       ) : (

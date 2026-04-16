@@ -8,6 +8,22 @@ import { formatMoney } from '@/lib/utils'
 import { toastSuccess, toastError } from '@/lib/toastUtils'
 import type { OfertaColocacion } from '@/types/database'
 
+// Tipo de tasa: identifica si es solicitud directa (firme/indicativa/cierre) vs subasta competitiva
+const tipoTasaBadge = (tipo: string) => {
+  const map: Record<string, { label: string; cls: string }> = {
+    firme:      { label: 'TASA FIRME',      cls: 'bg-green-900/30 text-green-200 border border-green-900/50' },
+    indicativa: { label: 'TASA INDICATIVA', cls: 'bg-blue-900/30 text-blue-200 border border-blue-900/50' },
+    cierre:     { label: 'TASA DE CIERRE',  cls: 'bg-orange-900/30 text-orange-200 border border-orange-900/50' },
+  }
+  const item = map[tipo]
+  if (!item) return null
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-bold ${item.cls}`}>
+      {item.label}
+    </span>
+  )
+}
+
 const estadoBadge = (estado: string) => {
   const map: Record<string, string> = {
     abierta: 'bg-green-900/30 text-green-300 border border-green-900/50',
@@ -140,23 +156,22 @@ export const BancoColocaciones: React.FC = () => {
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
+              <span className="px-2 py-0.5 rounded text-xs font-bold bg-teal-900/30 text-teal-200 border border-teal-900/50">
+                COLOCACIÓN DIRECTA
+              </span>
               {estadoBadge(sol.estado)}
               {vencida && abierta && (
                 <span className="px-2 py-0.5 rounded text-xs bg-yellow-900/30 text-yellow-300 border border-yellow-900/50">
                   Vencida
                 </span>
               )}
+              {sol.tipo_tasa && tipoTasaBadge(sol.tipo_tasa)}
               <span className="font-semibold text-lg">
                 {sol.monto ? `Máx. ${formatMoney(sol.monto, sol.moneda)}` : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
               </span>
               {sol.tasa_objetivo && (
                 <span className="text-sm font-semibold text-[var(--good)]">
                   {sol.tasa_objetivo}%
-                  {sol.tipo_tasa && (
-                    <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
-                      {sol.tipo_tasa}
-                    </span>
-                  )}
                 </span>
               )}
             </div>

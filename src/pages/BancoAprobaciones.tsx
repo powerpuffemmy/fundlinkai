@@ -4,6 +4,7 @@ import { Button } from '@/components/common/Button'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDateTime } from '@/lib/utils'
+import { notifNuevaOferta, notifOfertaColocacionRecibida } from '@/lib/notificaciones'
 
 interface OfertaPendiente {
   id: string
@@ -18,6 +19,8 @@ interface OfertaPendiente {
   subasta_moneda: string
   subasta_plazo: number
   subasta_tipo: string
+  // Para notificación al aprobar
+  subasta_cliente_id?: string
 }
 
 interface OfertaColocacionPendiente {
@@ -32,6 +35,7 @@ interface OfertaColocacionPendiente {
   created_at: string
   usuario_nombre: string
   cliente_nombre: string
+  cliente_id?: string
   solicitud_moneda: string
   solicitud_plazo: number
   solicitud_monto: number | null
@@ -43,25 +47,86 @@ export const BancoAprobaciones: React.FC = () => {
   const [ofertasColocacion, setOfertasColocacion] = useState<OfertaColocacionPendiente[]>([])
   const [loading, setLoading] = useState(true)
   const [procesando, setProcesando] = useState<Record<string, boolean>>({})
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const cargarOfertas = async () => {
     if (!user || user.role !== 'banco_admin') return
 
     try {
       setLoading(true)
+      setErrorMsg(null)
 
-      const [subasResponse, colocResponse] = await Promise.all([
-        supabase.rpc('obtener_ofertas_pendientes_admin'),
-        supabase.rpc('obtener_ofertas_colocacion_pendientes_admin'),
-      ])
+      // ── Subastas: ofertas de Mesa pendientes de aprobación ───────────────────
+      // Consulta directa (más confiable que el RPC si hay problemas de banco_id)
+      const { data: ofertasRaw, error: e1 } = await supabase
+        .from('ofertas')
+        .select(`
+          id, subasta_id, banco_id, tasa, estado, aprobada_por_admin, created_at,
+          usuario:users!banco_id(nombre),
+          subasta:subastas!subasta_id(monto, moneda, plazo, tipo, cliente_id)
+        `)
+        .eq('aprobada_por_admin', false)
+        .eq('estado', 'enviada')
+        .order('created_at', { ascending: false })
 
-      if (subasResponse.error) throw subasResponse.error
-      if (colocResponse.error) throw colocResponse.error
+      if (e1) throw e1
 
-      setOfertas((subasResponse.data || []) as OfertaPendiente[])
-      setOfertasColocacion((colocResponse.data || []) as OfertaColocacionPendiente[])
-    } catch (error) {
-      console.error('Error cargando ofertas:', error)
+      const ofertasMapped: OfertaPendiente[] = (ofertasRaw || []).map((o: any) => ({
+        id: o.id,
+        subasta_id: o.subasta_id,
+        banco_id: o.banco_id,
+        tasa: o.tasa,
+        estado: o.estado,
+        aprobada_por_admin: o.aprobada_por_admin,
+        created_at: o.created_at,
+        usuario_nombre: o.usuario?.nombre || '—',
+        subasta_monto: o.subasta?.monto ?? 0,
+        subasta_moneda: o.subasta?.moneda ?? 'GTQ',
+        subasta_plazo: o.subasta?.plazo ?? 0,
+        subasta_tipo: o.subasta?.tipo ?? '—',
+        subasta_cliente_id: o.subasta?.cliente_id,
+      }))
+
+      // ── Colocaciones: ofertas de Mesa pendientes de aprobación ───────────────
+      const { data: colocRaw, error: e2 } = await supabase
+        .from('ofertas_colocacion')
+        .select(`
+          id, solicitud_id, banco_id, tasa, monto, notas, estado, aprobada_por_admin, created_at,
+          usuario:users!banco_id(nombre),
+          solicitud:solicitudes_colocacion!solicitud_id(
+            moneda, plazo, monto,
+            cliente:users!cliente_id(id, nombre, entidad)
+          )
+        `)
+        .eq('aprobada_por_admin', false)
+        .eq('estado', 'enviada')
+        .order('created_at', { ascending: false })
+
+      if (e2) throw e2
+
+      const colocMapped: OfertaColocacionPendiente[] = (colocRaw || []).map((o: any) => ({
+        id: o.id,
+        solicitud_id: o.solicitud_id,
+        banco_id: o.banco_id,
+        tasa: o.tasa,
+        monto: o.monto,
+        notas: o.notas ?? null,
+        estado: o.estado,
+        aprobada_por_admin: o.aprobada_por_admin,
+        created_at: o.created_at,
+        usuario_nombre: o.usuario?.nombre || '—',
+        cliente_nombre: o.solicitud?.cliente?.entidad || o.solicitud?.cliente?.nombre || '—',
+        cliente_id: o.solicitud?.cliente?.id,
+        solicitud_moneda: o.solicitud?.moneda ?? 'GTQ',
+        solicitud_plazo: o.solicitud?.plazo ?? 0,
+        solicitud_monto: o.solicitud?.monto ?? null,
+      }))
+
+      setOfertas(ofertasMapped)
+      setOfertasColocacion(colocMapped)
+    } catch (error: any) {
+      console.error('Error cargando ofertas pendientes:', error)
+      setErrorMsg(error?.message || 'Error al cargar las ofertas pendientes')
     } finally {
       setLoading(false)
     }
@@ -71,23 +136,38 @@ export const BancoAprobaciones: React.FC = () => {
     cargarOfertas()
   }, [user])
 
-  const handleAprobar = async (ofertaId: string) => {
+  // ── Aprobar oferta de subasta ──────────────────────────────────────────────
+  const handleAprobar = async (oferta: OfertaPendiente) => {
     try {
-      setProcesando(prev => ({ ...prev, [ofertaId]: true }))
+      setProcesando(prev => ({ ...prev, [oferta.id]: true }))
 
       const { error } = await supabase
         .from('ofertas')
         .update({ aprobada_por_admin: true })
-        .eq('id', ofertaId)
+        .eq('id', oferta.id)
 
       if (error) throw error
 
       await supabase.rpc('log_auditoria', {
         p_user_id: user?.id,
         p_accion: 'Aprobar Oferta Mesa',
-        p_detalle: `Admin aprobó oferta de Mesa`,
-        p_metadata: { oferta_id: ofertaId }
+        p_detalle: 'Admin aprobó oferta de Mesa',
+        p_metadata: { oferta_id: oferta.id },
       })
+
+      // Notificar al cliente ahora que la oferta está aprobada
+      if (oferta.subasta_cliente_id) {
+        try {
+          notifNuevaOferta(oferta.subasta_cliente_id, {
+            cliente_nombre: 'Cliente',
+            banco_nombre: user?.entidad || user?.nombre || 'Banco',
+            monto: oferta.subasta_monto,
+            moneda: oferta.subasta_moneda,
+            tasa: oferta.tasa,
+            plazo: oferta.subasta_plazo,
+          })
+        } catch { /* no bloquear */ }
+      }
 
       alert('Oferta aprobada exitosamente')
       await cargarOfertas()
@@ -95,7 +175,7 @@ export const BancoAprobaciones: React.FC = () => {
       console.error('Error al aprobar:', error)
       alert('Error al aprobar la oferta')
     } finally {
-      setProcesando(prev => ({ ...prev, [ofertaId]: false }))
+      setProcesando(prev => ({ ...prev, [oferta.id]: false }))
     }
   }
 
@@ -116,8 +196,8 @@ export const BancoAprobaciones: React.FC = () => {
       await supabase.rpc('log_auditoria', {
         p_user_id: user?.id,
         p_accion: 'Rechazar Oferta Mesa',
-        p_detalle: `Admin rechazó oferta de Mesa`,
-        p_metadata: { oferta_id: ofertaId }
+        p_detalle: 'Admin rechazó oferta de Mesa',
+        p_metadata: { oferta_id: ofertaId },
       })
 
       alert('Oferta rechazada')
@@ -130,23 +210,39 @@ export const BancoAprobaciones: React.FC = () => {
     }
   }
 
-  const handleAprobarColocacion = async (ofertaId: string) => {
+  // ── Aprobar oferta de colocación ───────────────────────────────────────────
+  const handleAprobarColocacion = async (oferta: OfertaColocacionPendiente) => {
     try {
-      setProcesando(prev => ({ ...prev, [ofertaId]: true }))
+      setProcesando(prev => ({ ...prev, [oferta.id]: true }))
 
       const { error } = await supabase
         .from('ofertas_colocacion')
         .update({ aprobada_por_admin: true })
-        .eq('id', ofertaId)
+        .eq('id', oferta.id)
 
       if (error) throw error
 
       await supabase.rpc('log_auditoria', {
         p_user_id: user?.id,
         p_accion: 'Aprobar Oferta Colocación Mesa',
-        p_detalle: `Admin aprobó oferta de colocación de Mesa`,
-        p_metadata: { oferta_id: ofertaId }
+        p_detalle: 'Admin aprobó oferta de colocación de Mesa',
+        p_metadata: { oferta_id: oferta.id },
       })
+
+      // Notificar al cliente ahora que la oferta de colocación está aprobada
+      if (oferta.cliente_id) {
+        try {
+          notifOfertaColocacionRecibida(oferta.cliente_id, {
+            cliente_nombre: oferta.cliente_nombre,
+            banco_nombre: user?.entidad || user?.nombre || 'Banco',
+            monto: oferta.monto,
+            moneda: oferta.solicitud_moneda,
+            tasa: oferta.tasa,
+            plazo: oferta.solicitud_plazo,
+            notas: oferta.notas ?? undefined,
+          })
+        } catch { /* no bloquear */ }
+      }
 
       alert('Oferta de colocación aprobada')
       await cargarOfertas()
@@ -154,7 +250,7 @@ export const BancoAprobaciones: React.FC = () => {
       console.error('Error al aprobar colocación:', error)
       alert('Error al aprobar la oferta de colocación')
     } finally {
-      setProcesando(prev => ({ ...prev, [ofertaId]: false }))
+      setProcesando(prev => ({ ...prev, [oferta.id]: false }))
     }
   }
 
@@ -175,8 +271,8 @@ export const BancoAprobaciones: React.FC = () => {
       await supabase.rpc('log_auditoria', {
         p_user_id: user?.id,
         p_accion: 'Rechazar Oferta Colocación Mesa',
-        p_detalle: `Admin rechazó oferta de colocación de Mesa`,
-        p_metadata: { oferta_id: ofertaId }
+        p_detalle: 'Admin rechazó oferta de colocación de Mesa',
+        p_metadata: { oferta_id: ofertaId },
       })
 
       alert('Oferta de colocación rechazada')
@@ -189,6 +285,7 @@ export const BancoAprobaciones: React.FC = () => {
     }
   }
 
+  // ── Guards ─────────────────────────────────────────────────────────────────
   if (user?.role !== 'banco_admin') {
     return (
       <Card>
@@ -215,11 +312,22 @@ export const BancoAprobaciones: React.FC = () => {
       <div>
         <h2 className="text-2xl font-bold">Aprobaciones de Mesa de Dinero</h2>
         {totalPendientes > 0 ? (
-          <p className="text-[var(--muted)] mt-1">{totalPendientes} oferta(s) pendiente(s) de aprobación</p>
+          <p className="text-[var(--muted)] mt-1">
+            {totalPendientes} oferta(s) pendiente(s) de aprobación
+          </p>
         ) : (
           <p className="text-[var(--muted)] mt-1">No hay ofertas pendientes</p>
         )}
       </div>
+
+      {errorMsg && (
+        <Card className="border-red-900/50 bg-red-900/10">
+          <p className="text-red-400 text-sm">{errorMsg}</p>
+          <Button variant="small" className="mt-2 text-xs" onClick={cargarOfertas}>
+            Reintentar
+          </Button>
+        </Card>
+      )}
 
       {/* ─── Sección 1: Subastas ─── */}
       <div className="space-y-3">
@@ -274,7 +382,7 @@ export const BancoAprobaciones: React.FC = () => {
                           <Button
                             variant="primary"
                             className="text-xs"
-                            onClick={() => handleAprobar(oferta.id)}
+                            onClick={() => handleAprobar(oferta)}
                             disabled={procesando[oferta.id]}
                           >
                             {procesando[oferta.id] ? 'Aprobando...' : 'Aprobar'}
@@ -361,7 +469,7 @@ export const BancoAprobaciones: React.FC = () => {
                           <Button
                             variant="primary"
                             className="text-xs"
-                            onClick={() => handleAprobarColocacion(oferta.id)}
+                            onClick={() => handleAprobarColocacion(oferta)}
                             disabled={procesando[oferta.id]}
                           >
                             {procesando[oferta.id] ? 'Aprobando...' : 'Aprobar'}

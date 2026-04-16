@@ -62,8 +62,8 @@ export const ClienteOnboarding: React.FC = () => {
     
     // Pre-seleccionar todos con límite de 10M
     const seleccion: Record<string, number> = {}
-    bancos.forEach((b: { id: string; nombre: string; entidad: string }) => {
-      seleccion[b.id] = 10000000 // 10M por defecto
+    bancos.forEach((b: any) => {
+      seleccion[b.banco_id ?? b.id] = 10000000 // 10M por defecto
     })
     setBancosSeleccionados(seleccion)
   }
@@ -323,28 +323,29 @@ export const ClienteOnboarding: React.FC = () => {
           </p>
 
           <div className="grid md:grid-cols-2 gap-4 mb-6">
-            {bancosDisponibles.map(banco => {
-              const seleccionado = bancosSeleccionados[banco.id] !== undefined
+            {bancosDisponibles.map((banco: any) => {
+              const bid = banco.banco_id ?? banco.id
+              const seleccionado = bancosSeleccionados[bid] !== undefined
 
               return (
                 <div
-                  key={banco.id}
+                  key={bid}
                   className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                     seleccionado
                       ? 'border-[var(--primary)] bg-blue-900/10'
                       : 'border-white/10 bg-white/5 hover:border-white/30'
                   }`}
-                  onClick={() => handleToggleBanco(banco.id)}
+                  onClick={() => handleToggleBanco(bid)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="font-semibold">{banco.entidad}</div>
-                      <div className="text-xs text-[var(--muted)]">{banco.nombre}</div>
+                      <div className="font-semibold">{banco.banco_entidad ?? banco.entidad}</div>
+                      <div className="text-xs text-[var(--muted)]">{banco.banco_nombre ?? banco.nombre}</div>
                     </div>
                     <input
                       type="checkbox"
                       checked={seleccionado}
-                      onChange={() => {}} // Manejado por onClick del div
+                      onChange={() => {}}
                       className="w-5 h-5"
                     />
                   </div>
@@ -354,8 +355,8 @@ export const ClienteOnboarding: React.FC = () => {
                       <Input
                         label="Límite de colocación"
                         type="number"
-                        value={bancosSeleccionados[banco.id]}
-                        onChange={(e) => handleChangeLimite(banco.id, e.target.value)}
+                        value={bancosSeleccionados[bid]}
+                        onChange={(e) => handleChangeLimite(bid, e.target.value)}
                         min="1000000"
                         step="1000000"
                       />
