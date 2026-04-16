@@ -29,11 +29,12 @@ import { WebAdminCompromisos } from './pages/WebAdminCompromisos'
 import { WebAdminSistema } from './pages/WebAdminSistema'
 import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
+import { HelpDesk } from './pages/HelpDesk'
 import { Button } from './components/common/Button'
 
-type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'solicitudes' | 'nueva-solicitud'
-type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion' | 'colocaciones'
-type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones'
+type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'solicitudes' | 'nueva-solicitud' | 'help'
+type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion' | 'colocaciones' | 'help'
+type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones' | 'help'
 type Page = ClientePage | BancoPage | WebAdminPage
 
 function App() {
@@ -177,6 +178,12 @@ function App() {
           >
             Configuración
           </Button>
+          <Button
+            variant={currentPage === 'help' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('help')}
+          >
+            Help Desk
+          </Button>
         </div>
       )
     }
@@ -236,6 +243,12 @@ function App() {
           >
             Configuración
           </Button>
+          <Button
+            variant={currentPage === 'help' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('help')}
+          >
+            Help Desk
+          </Button>
         </div>
       )
     }
@@ -273,11 +286,17 @@ function App() {
           >
             Sistema
           </Button>
-          <Button 
+          <Button
             variant={currentPage === 'auditoria' ? 'primary' : 'secondary'}
             onClick={() => setCurrentPage('auditoria')}
           >
             Auditoría
+          </Button>
+          <Button
+            variant={currentPage === 'help' ? 'primary' : 'secondary'}
+            onClick={() => setCurrentPage('help')}
+          >
+            Help Desk
           </Button>
         </div>
       )
@@ -305,6 +324,8 @@ function App() {
           return <NuevaSolicitudColocacion key={nuevaSolicitudKey} onCreada={() => setCurrentPage('solicitudes')} />
         case 'configuracion':
           return <ClienteConfiguracion />
+        case 'help':
+          return <HelpDesk />
         default:
           return <ClienteDashboard onNavigate={(page) => setCurrentPage(page as Page)} />
       }
@@ -326,6 +347,8 @@ function App() {
           return <BancoColocaciones />
         case 'configuracion':
           return <BancoConfiguracion />
+        case 'help':
+          return <HelpDesk />
         default:
           return <BancoDashboard onNavigate={setCurrentPage} />
       }
@@ -343,6 +366,8 @@ function App() {
           return <WebAdminSistema />
         case 'auditoria':
           return <WebAdminAuditoria />
+        case 'help':
+          return <HelpDesk />
         default:
           return <WebAdminDashboard />
       }
