@@ -199,7 +199,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
         <div>
           <h2 className="text-2xl font-bold">Nueva Solicitud de Colocación</h2>
           <p className="text-[var(--muted)] mt-1">
-            Envía una solicitud al banco para que proponga una tasa en firme
+            Envía una solicitud al banco para que proponga una tasa cierre
           </p>
         </div>
 
@@ -209,7 +209,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
 
             <form onSubmit={handleSiguiente} className="space-y-4">
               <div className="p-3 rounded border text-xs bg-purple-900/10 border-purple-900/30 text-purple-300">
-                📋 El banco recibirá tu solicitud y responderá con una <strong>tasa en firme</strong> y el monto que puede colocar.
+                📋 El banco recibirá tu solicitud y responderá con una <strong>tasa cierre</strong> y el monto que puede colocar.
               </div>
 
               <Select
@@ -309,9 +309,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
                   label="Tipo de Tasa"
                   options={[
                     { value: '', label: '— Sin tipo —' },
-                    { value: 'firme', label: 'Firme' },
-                    { value: 'cierre', label: 'Cierre' },
-                    { value: 'indicativa', label: 'Indicativa' }
+                    { value: 'firme', label: 'Cierre' },
+                    { value: 'indicativa', label: 'Objetivo' }
                   ]}
                   value={tipoTasa}
                   onChange={(e) => setTipoTasa(e.target.value as any)}
@@ -399,7 +398,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
 
             <div className="mt-6 p-3 bg-purple-900/20 border border-purple-900/50 rounded">
               <p className="text-xs text-purple-200">
-                <strong>Flujo:</strong> El banco recibe tu solicitud → propone tasa en firme y monto → tú aceptas o rechazas la oferta.
+                <strong>Flujo:</strong> El banco recibe tu solicitud → propone tasa cierre y monto → tú aceptas o rechazas la oferta.
               </p>
             </div>
           </Card>

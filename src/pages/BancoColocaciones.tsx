@@ -11,9 +11,9 @@ import type { OfertaColocacion } from '@/types/database'
 // Tipo de tasa: identifica si es solicitud directa (firme/indicativa/cierre) vs subasta competitiva
 const tipoTasaBadge = (tipo: string) => {
   const map: Record<string, { label: string; cls: string }> = {
-    firme:      { label: 'TASA FIRME',      cls: 'bg-green-900/30 text-green-200 border border-green-900/50' },
-    indicativa: { label: 'TASA INDICATIVA', cls: 'bg-blue-900/30 text-blue-200 border border-blue-900/50' },
-    cierre:     { label: 'TASA DE CIERRE',  cls: 'bg-orange-900/30 text-orange-200 border border-orange-900/50' },
+    firme:      { label: 'TASA CIERRE',   cls: 'bg-green-900/30 text-green-200 border border-green-900/50' },
+    indicativa: { label: 'TASA OBJETIVO', cls: 'bg-blue-900/30 text-blue-200 border border-blue-900/50' },
+    cierre:     { label: 'TASA CIERRE',   cls: 'bg-orange-900/30 text-orange-200 border border-orange-900/50' },
   }
   const item = map[tipo]
   if (!item) return null
@@ -291,7 +291,7 @@ export const BancoColocaciones: React.FC = () => {
                 )}
                 <div className="grid sm:grid-cols-3 gap-3">
                   <Input
-                    label="Tasa en firme (%)"
+                    label="Tasa Cierre (%)"
                     type="number"
                     step="0.01"
                     min="0.01"
@@ -378,7 +378,7 @@ export const BancoColocaciones: React.FC = () => {
         <p className="text-[var(--muted)] mt-1">
           {esAuditor
             ? 'Consulta las solicitudes de colocación recibidas'
-            : 'Responde con tasa en firme a las solicitudes de tus clientes'}
+            : 'Responde con tasa cierre a las solicitudes de tus clientes'}
         </p>
       </div>
 

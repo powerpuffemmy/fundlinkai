@@ -39,6 +39,7 @@ type Page = ClientePage | BancoPage | WebAdminPage
 function App() {
   const { user, loading, initialized, initialize } = useAuthStore()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const [nuevaSolicitudKey, setNuevaSolicitudKey] = useState(0)
   const [mostrarCambioPassword, setMostrarCambioPassword] = useState(false)
 
   useEffect(() => {
@@ -130,7 +131,7 @@ function App() {
           </Button>
           <Button
             variant={currentPage === 'nueva-solicitud' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('nueva-solicitud')}
+            onClick={() => { setCurrentPage('nueva-solicitud'); setNuevaSolicitudKey(k => k + 1) }}
           >
             Nueva Solicitud
           </Button>
@@ -301,7 +302,7 @@ function App() {
         case 'solicitudes':
           return <ClienteSolicitudesColocacion />
         case 'nueva-solicitud':
-          return <NuevaSolicitudColocacion onCreada={() => setCurrentPage('solicitudes')} />
+          return <NuevaSolicitudColocacion key={nuevaSolicitudKey} onCreada={() => setCurrentPage('solicitudes')} />
         case 'configuracion':
           return <ClienteConfiguracion />
         default:

@@ -365,9 +365,9 @@ export const generarPDFSolicitudColocacion = async (solicitud: SolicitudParaPDF)
   const verifyUrl = `${window.location.origin}?verify-sol=${solId}`
   const qrSrc = await generarQR(verifyUrl)
   const tipoTasaMap: Record<string, string> = {
-    firme: 'Tasa Fija en Firme',
-    cierre: 'Tasa al Cierre',
-    indicativa: 'Tasa Indicativa'
+    firme: 'Tasa Cierre',
+    cierre: 'Tasa Cierre',
+    indicativa: 'Tasa Objetivo'
   }
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
@@ -427,7 +427,7 @@ ${solicitud.notas ? `<div class="section"><div class="section-title">NOTAS DEL S
 
 <div class="section">
   <div class="section-title">PROCESO</div>
-  <div class="terms"><p>El banco receptor deberá responder con una <strong>tasa en firme</strong> y monto definitivo antes de la fecha de cierre indicada.</p></div>
+  <div class="terms"><p>El banco receptor deberá responder con una <strong>tasa cierre</strong> y monto definitivo antes de la fecha de cierre indicada.</p></div>
   <div class="terms"><p>La aceptación de una oferta generará automáticamente un Contrato de Colocación con los datos acordados.</p></div>
 </div>
 
@@ -486,12 +486,12 @@ export const generarPDFOfertaColocacion = async (oferta: OfertaParaPDF) => {
 </div>
 
 <div class="section">
-  <div class="section-title">OFERTA EN FIRME</div>
+  <div class="section-title">OFERTA DE COLOCACIÓN</div>
   <table>
     <tr><th>Concepto</th><th>Detalle</th></tr>
     <tr><td><strong>Monto Ofertado</strong></td><td class="highlight">${fmt(oferta.monto)}</td></tr>
     <tr><td><strong>Moneda</strong></td><td>${moneda}</td></tr>
-    <tr><td><strong>Tasa en Firme (Anual)</strong></td><td class="highlight-green">${oferta.tasa}%</td></tr>
+    <tr><td><strong>Tasa Cierre (Anual)</strong></td><td class="highlight-green">${oferta.tasa}%</td></tr>
     ${plazo > 0 ? `<tr><td><strong>Plazo</strong></td><td>${plazo} días</td></tr>` : ''}
     ${intereses !== null ? `
     <tr><td><strong>Intereses Estimados (30/360)</strong></td><td style="color:#10b981;font-weight:bold">${fmt(intereses)}</td></tr>
@@ -504,7 +504,7 @@ ${oferta.notas ? `<div class="section"><div class="section-title">CONDICIONES ES
 <div class="section">
   <div class="section-title">CONDICIONES DE LA OFERTA</div>
   <div class="terms"><p>Esta oferta tiene validez hasta la fecha de cierre de la solicitud. La aceptación genera un Contrato de Colocación vinculante.</p></div>
-  <div class="terms"><p>La tasa ofertada es <strong>en firme</strong>. El desembolso deberá ejecutarse dentro de las 24 horas posteriores a la aceptación.</p></div>
+  <div class="terms"><p>La tasa ofertada es <strong>tasa cierre</strong>. El desembolso deberá ejecutarse dentro de las 24 horas posteriores a la aceptación.</p></div>
 </div>
 
 <div class="signatures">
