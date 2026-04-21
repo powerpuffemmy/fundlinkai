@@ -309,8 +309,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
                   label="Tipo de Tasa"
                   options={[
                     { value: '', label: '— Sin tipo —' },
-                    { value: 'firme', label: 'Cierre' },
-                    { value: 'indicativa', label: 'Objetivo' }
+                    { value: 'firme', label: 'TASA EN FIRME / CIERRE' },
+                    { value: 'indicativa', label: 'TASA INDICATIVA / OBJETIVO' }
                   ]}
                   value={tipoTasa}
                   onChange={(e) => setTipoTasa(e.target.value as any)}
@@ -382,8 +382,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
                 <span className="font-semibold text-[var(--good)]">
                   {tasa ? `${tasa}%` : '—'}
                   {tasa && tipoTasa && (
-                    <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
-                      {tipoTasa}
+                    <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white">
+                      {tipoTasa === 'firme' ? 'TASA EN FIRME / CIERRE' : tipoTasa === 'indicativa' ? 'TASA INDICATIVA / OBJETIVO' : tipoTasa}
                     </span>
                   )}
                 </span>
@@ -438,8 +438,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
             <div className="font-bold text-lg text-[var(--good)]">
               {datosTemp?.tasa_objetivo ? `${datosTemp.tasa_objetivo}%` : '—'}
               {datosTemp?.tipo_tasa && (
-                <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
-                  {datosTemp.tipo_tasa}
+                <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white">
+                  {datosTemp.tipo_tasa === 'firme' ? 'TASA EN FIRME / CIERRE' : datosTemp.tipo_tasa === 'indicativa' ? 'TASA INDICATIVA / OBJETIVO' : datosTemp.tipo_tasa}
                 </span>
               )}
             </div>

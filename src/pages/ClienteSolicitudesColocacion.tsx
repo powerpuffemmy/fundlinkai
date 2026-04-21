@@ -157,7 +157,7 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
                                     {sol.tasa_objetivo}%
                                     {sol.tipo_tasa && (
                                       <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
-                                        {sol.tipo_tasa === 'firme' ? 'Cierre' : sol.tipo_tasa === 'indicativa' ? 'Objetivo' : sol.tipo_tasa}
+                                        {sol.tipo_tasa === 'firme' || sol.tipo_tasa === 'cierre' ? 'TASA EN FIRME / CIERRE' : sol.tipo_tasa === 'indicativa' ? 'TASA INDICATIVA / OBJETIVO' : sol.tipo_tasa}
                                       </span>
                                     )}
                                   </span>
@@ -333,7 +333,7 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
                                   {sol.tasa_objetivo}%
                                   {sol.tipo_tasa && (
                                     <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
-                                      {sol.tipo_tasa === 'firme' ? 'Cierre' : sol.tipo_tasa === 'indicativa' ? 'Objetivo' : sol.tipo_tasa}
+                                      {sol.tipo_tasa === 'firme' || sol.tipo_tasa === 'cierre' ? 'TASA EN FIRME / CIERRE' : sol.tipo_tasa === 'indicativa' ? 'TASA INDICATIVA / OBJETIVO' : sol.tipo_tasa}
                                     </span>
                                   )}
                                 </span>

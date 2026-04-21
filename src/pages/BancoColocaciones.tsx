@@ -11,9 +11,9 @@ import type { OfertaColocacion } from '@/types/database'
 // Tipo de tasa: identifica si es solicitud directa (firme/indicativa/cierre) vs subasta competitiva
 const tipoTasaBadge = (tipo: string) => {
   const map: Record<string, { label: string; cls: string }> = {
-    firme:      { label: 'TASA CIERRE',   cls: 'bg-green-900/30 text-green-200 border border-green-900/50' },
-    indicativa: { label: 'TASA OBJETIVO', cls: 'bg-blue-900/30 text-blue-200 border border-blue-900/50' },
-    cierre:     { label: 'TASA CIERRE',   cls: 'bg-orange-900/30 text-orange-200 border border-orange-900/50' },
+    firme:      { label: 'TASA EN FIRME / CIERRE',    cls: 'bg-green-900/30 text-green-200 border border-green-900/50' },
+    indicativa: { label: 'TASA INDICATIVA / OBJETIVO', cls: 'bg-blue-900/30 text-blue-200 border border-blue-900/50' },
+    cierre:     { label: 'TASA EN FIRME / CIERRE',    cls: 'bg-orange-900/30 text-orange-200 border border-orange-900/50' },
   }
   const item = map[tipo]
   if (!item) return null

@@ -365,9 +365,9 @@ export const generarPDFSolicitudColocacion = async (solicitud: SolicitudParaPDF)
   const verifyUrl = `${window.location.origin}?verify-sol=${solId}`
   const qrSrc = await generarQR(verifyUrl)
   const tipoTasaMap: Record<string, string> = {
-    firme: 'Tasa Cierre',
-    cierre: 'Tasa Cierre',
-    indicativa: 'Tasa Objetivo'
+    firme: 'Tasa en Firme / Cierre',
+    cierre: 'Tasa en Firme / Cierre',
+    indicativa: 'Tasa Indicativa / Objetivo'
   }
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
