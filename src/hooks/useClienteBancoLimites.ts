@@ -166,8 +166,18 @@ export const useClienteBancoLimites = () => {
       const { data, error } = await supabase
         .rpc('obtener_todos_bancos')
 
-      // Si el RPC funciona y devuelve datos, usarlos
-      if (!error && data && data.length > 0) return data as BancoDisponible[]
+      // RPC returns { id, nombre, entidad } — map to BancoDisponible shape
+      if (!error && data && data.length > 0) {
+        return (data as any[]).map(b => ({
+          banco_id: b.id,
+          banco_nombre: b.nombre,
+          banco_entidad: b.entidad || b.nombre,
+          limite_monto: 0,
+          monto_utilizado: 0,
+          monto_disponible: 0,
+          todos_user_ids: [b.id],
+        }))
+      }
 
       // Fallback: consulta directa
       return _fallbackLimitesDirectos()
