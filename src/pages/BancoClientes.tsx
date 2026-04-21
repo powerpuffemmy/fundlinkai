@@ -39,6 +39,23 @@ export const BancoClientes: React.FC = () => {
     try {
       setLoading(true)
 
+      // cliente_banco_limites.banco_id referencia bancos(id) del catálogo,
+      // no users(id). Necesitamos el banco_catalog_id del usuario actual.
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('banco_catalog_id')
+        .eq('id', user.id)
+        .single()
+
+      if (userError) throw userError
+
+      const bancoCatalogId = userData?.banco_catalog_id
+      if (!bancoCatalogId) {
+        setClientes([])
+        setLoading(false)
+        return
+      }
+
       // Obtener clientes que tienen límites configurados con este banco
       const { data: limites, error } = await supabase
         .from('cliente_banco_limites')
@@ -55,7 +72,7 @@ export const BancoClientes: React.FC = () => {
             telefono
           )
         `)
-        .eq('banco_id', user.id)
+        .eq('banco_id', bancoCatalogId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
