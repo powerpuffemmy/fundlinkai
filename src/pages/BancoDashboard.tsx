@@ -46,7 +46,11 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
 
   // Métricas de colocaciones
   const ahora = new Date()
-  const colSinOferta = solicitudesColocacion.filter(s => !s.ofertas || s.ofertas.length === 0)
+  const colSinOferta = solicitudesColocacion.filter(s =>
+    (!s.ofertas || s.ofertas.length === 0) &&
+    s.estado === 'abierta' &&
+    new Date(s.fecha_cierre) >= ahora
+  )
   const colConOferta = solicitudesColocacion.filter(s => s.ofertas && s.ofertas.length > 0)
   const colAceptadas = solicitudesColocacion.filter(s => s.ofertas?.some(o => o.estado === 'aceptada'))
 
