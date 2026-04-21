@@ -30,12 +30,191 @@ import { WebAdminSistema } from './pages/WebAdminSistema'
 import { WebAdminAuditoria } from './pages/WebAdminAuditoria'
 import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { HelpDesk } from './pages/HelpDesk'
-import { Button } from './components/common/Button'
+import type { User } from './types/database'
 
 type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'solicitudes' | 'nueva-solicitud' | 'help'
 type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion' | 'colocaciones' | 'help'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones' | 'help'
 type Page = ClientePage | BancoPage | WebAdminPage
+
+// ─── Sidebar helpers ─────────────────────────────────────────────────────────
+
+function NavItem({
+  icon, label, active, onClick, indent = false,
+}: {
+  icon: string; label: string; active: boolean; onClick: () => void; indent?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        w-full flex items-center gap-3 py-2 pr-4 text-sm transition-all text-left relative
+        ${indent ? 'pl-10' : 'pl-4'}
+        ${active
+          ? 'text-[var(--primary)] bg-[var(--primary)]/10 font-semibold before:absolute before:left-0 before:inset-y-0 before:w-0.5 before:bg-[var(--primary)] before:rounded-r'
+          : 'text-[var(--muted)] hover:text-white hover:bg-white/5'
+        }
+      `}
+    >
+      <span className="text-base leading-none flex-shrink-0">{icon}</span>
+      <span className="truncate">{label}</span>
+    </button>
+  )
+}
+
+function NavGroup({
+  icon, label, children, defaultOpen = true,
+}: {
+  icon: string; label: string; children: React.ReactNode; defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between pl-4 pr-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-base leading-none">{icon}</span>
+          <span className="font-semibold">{label}</span>
+        </div>
+        <span className="text-[10px] text-[var(--muted)]">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <div>{children}</div>}
+    </div>
+  )
+}
+
+function NavDivider({ label }: { label?: string }) {
+  return (
+    <div className="px-4 pt-4 pb-1">
+      {label
+        ? <span className="text-[10px] uppercase tracking-widest text-white/25 font-semibold">{label}</span>
+        : <div className="border-t border-[var(--line)]" />
+      }
+    </div>
+  )
+}
+
+// ─── Sidebars por rol ────────────────────────────────────────────────────────
+
+function ClienteSidebar({
+  current, go, goNuevaSolicitud, user,
+}: {
+  current: Page
+  go: (p: Page) => void
+  goNuevaSolicitud: () => void
+  user: User
+}) {
+  const rolLabel = user.role === 'cliente_admin' ? 'Admin' : 'Usuario'
+  return (
+    <nav className="py-4 flex flex-col gap-0.5">
+      {/* Role badge */}
+      <div className="px-4 pb-3 flex items-center gap-2">
+        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30 font-semibold">
+          Cliente · {rolLabel}
+        </span>
+      </div>
+
+      <NavItem icon="🏠" label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
+
+      <NavDivider label="Colocaciones" />
+      <NavItem icon="➕" label="Nueva Solicitud" active={current === 'nueva-solicitud'} onClick={goNuevaSolicitud} />
+      <NavItem icon="📋" label="Mis Solicitudes" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
+
+      <NavDivider label="Subastas" />
+      <NavGroup icon="🏛️" label="Subastas">
+        <NavItem indent icon="➕" label="Nueva Subasta" active={current === 'nueva-subasta'} onClick={() => go('nueva-subasta')} />
+        <NavItem indent icon="📑" label="Mis Subastas" active={current === 'subastas'} onClick={() => go('subastas')} />
+        <NavItem indent icon="📜" label="Historial" active={current === 'historial'} onClick={() => go('historial')} />
+      </NavGroup>
+
+      <NavDivider label="Seguimiento" />
+      <NavItem icon="📄" label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
+      <NavItem icon="📅" label="Vencimientos" active={current === 'vencimientos'} onClick={() => go('vencimientos')} />
+
+      <NavDivider />
+      <NavItem icon="⚙️" label="Configuración" active={current === 'configuracion'} onClick={() => go('configuracion')} />
+      <NavItem icon="❓" label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
+    </nav>
+  )
+}
+
+function BancoSidebar({
+  current, go, user,
+}: {
+  current: Page
+  go: (p: Page) => void
+  user: User
+}) {
+  const isAdmin = user.role === 'banco_admin'
+  const rolLabel = user.role === 'banco_admin' ? 'Admin' : user.role === 'banco_mesa' ? 'Mesa' : 'Auditor'
+  return (
+    <nav className="py-4 flex flex-col gap-0.5">
+      <div className="px-4 pb-3 flex items-center gap-2">
+        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold">
+          Banco · {rolLabel}
+        </span>
+      </div>
+
+      <NavItem icon="🏠" label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
+
+      <NavDivider label="Mercado" />
+      <NavGroup icon="📋" label="Solicitudes & Ofertas">
+        <NavItem indent icon="📋" label="Subastas Activas" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
+        <NavItem indent icon="📤" label="Mis Ofertas" active={current === 'ofertas'} onClick={() => go('ofertas')} />
+      </NavGroup>
+      <NavItem icon="🏦" label="Colocaciones" active={current === 'colocaciones'} onClick={() => go('colocaciones')} />
+
+      {isAdmin && (
+        <>
+          <NavDivider label="Gestión" />
+          <NavItem icon="✅" label="Aprobaciones" active={current === 'aprobaciones'} onClick={() => go('aprobaciones')} />
+          <NavItem icon="👥" label="Clientes" active={current === 'clientes'} onClick={() => go('clientes')} />
+        </>
+      )}
+
+      <NavDivider label="Operaciones" />
+      <NavItem icon="📄" label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
+
+      <NavDivider />
+      <NavItem icon="⚙️" label="Configuración" active={current === 'configuracion'} onClick={() => go('configuracion')} />
+      <NavItem icon="❓" label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
+    </nav>
+  )
+}
+
+function WebAdminSidebar({ current, go }: { current: Page; go: (p: Page) => void }) {
+  return (
+    <nav className="py-4 flex flex-col gap-0.5">
+      <div className="px-4 pb-3 flex items-center gap-2">
+        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
+          Web Admin
+        </span>
+      </div>
+
+      <NavItem icon="🏠" label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
+
+      <NavDivider label="Usuarios" />
+      <NavItem icon="👥" label="Usuarios" active={current === 'usuarios'} onClick={() => go('usuarios')} />
+      <NavItem icon="✅" label="Aprobaciones" active={current === 'aprobaciones'} onClick={() => go('aprobaciones')} />
+
+      <NavDivider label="Operaciones" />
+      <NavItem icon="📄" label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
+
+      <NavDivider label="Plataforma" />
+      <NavGroup icon="🖥️" label="Sistema & Auditoría">
+        <NavItem indent icon="🖥️" label="Sistema" active={current === 'sistema'} onClick={() => go('sistema')} />
+        <NavItem indent icon="🔍" label="Auditoría" active={current === 'auditoria'} onClick={() => go('auditoria')} />
+      </NavGroup>
+
+      <NavDivider />
+      <NavItem icon="❓" label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
+    </nav>
+  )
+}
+
+// ─── App principal ────────────────────────────────────────────────────────────
 
 function App() {
   const { user, loading, initialized, initialize } = useAuthStore()
@@ -47,61 +226,45 @@ function App() {
     initialize()
   }, [])
 
-  // Soporte de URL para verificación QR: ?verify=<id> navega a compromisos
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('verify') || params.get('verify-sol') || params.get('verify-oferta')) {
-      // Limpiar la URL sin recargar
       window.history.replaceState({}, '', window.location.pathname)
-      // Navegar a compromisos al estar autenticado
       if (user) setCurrentPage('compromisos')
     }
   }, [user])
 
   useEffect(() => {
-    // Si es primer login, mostrar modal para cambiar contraseña
     if (user && user.primer_login) {
       setMostrarCambioPassword(true)
     }
   }, [user])
 
   const handlePasswordCambiado = async () => {
-    // Marcar que ya no es primer login
     if (user) {
-      await supabase
-        .from('users')
-        .update({ primer_login: false })
-        .eq('id', user.id)
+      await supabase.from('users').update({ primer_login: false }).eq('id', user.id)
     }
     setMostrarCambioPassword(false)
-    window.location.reload() // Recargar para actualizar el usuario
+    window.location.reload()
   }
 
   if (!initialized || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[var(--primary)] mx-auto mb-4" />
           <p className="text-white text-lg">Cargando...</p>
         </div>
       </div>
     )
   }
 
-  if (!user) {
-    return <LoginPage />
-  }
+  if (!user) return <LoginPage />
 
-  // Si es cliente y no ha completado onboarding, mostrar pantalla de configuración
   if (user.role.startsWith('cliente') && !user.onboarding_completado) {
-    return (
-      <Layout>
-        <ClienteOnboarding />
-      </Layout>
-    )
+    return <Layout><ClienteOnboarding /></Layout>
   }
 
-  // Si es cliente aprobado pero no activo, mostrar mensaje de espera
   if (user.role.startsWith('cliente') && user.onboarding_completado && !user.aprobado_por_admin) {
     return (
       <Layout>
@@ -112,264 +275,73 @@ function App() {
             Tu configuración está siendo revisada por nuestro equipo.
             Te notificaremos cuando tu cuenta esté aprobada y puedas empezar a operar.
           </p>
-          <p className="text-sm text-[var(--muted)]">
-            Si tienes preguntas, contacta a soporte.
-          </p>
+          <p className="text-sm text-[var(--muted)]">Si tienes preguntas, contacta a soporte.</p>
         </div>
       </Layout>
     )
   }
 
-  const getNavigation = () => {
+  const go = (p: Page) => setCurrentPage(p)
+
+  const getSidebar = () => {
     if (user.role.startsWith('cliente')) {
       return (
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <Button
-            variant={currentPage === 'dashboard' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('dashboard')}
-          >
-            Dashboard
-          </Button>
-          <Button
-            variant={currentPage === 'nueva-solicitud' ? 'primary' : 'secondary'}
-            onClick={() => { setCurrentPage('nueva-solicitud'); setNuevaSolicitudKey(k => k + 1) }}
-          >
-            Nueva Solicitud
-          </Button>
-          <Button
-            variant={currentPage === 'solicitudes' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('solicitudes')}
-          >
-            Mis Solicitudes
-          </Button>
-          <Button
-            variant={currentPage === 'nueva-subasta' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('nueva-subasta')}
-          >
-            Nueva Subasta
-          </Button>
-          <Button
-            variant={currentPage === 'subastas' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('subastas')}
-          >
-            Mis Subastas
-          </Button>
-          <Button
-            variant={currentPage === 'historial' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('historial')}
-          >
-            Historial
-          </Button>
-          <Button
-            variant={currentPage === 'compromisos' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('compromisos')}
-          >
-            Compromisos
-          </Button>
-          <Button
-            variant={currentPage === 'vencimientos' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('vencimientos')}
-          >
-            Vencimientos
-          </Button>
-          <Button
-            variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('configuracion')}
-          >
-            Configuración
-          </Button>
-          <Button
-            variant={currentPage === 'help' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('help')}
-          >
-            Help Desk
-          </Button>
-        </div>
+        <ClienteSidebar
+          current={currentPage}
+          go={go}
+          goNuevaSolicitud={() => { go('nueva-solicitud'); setNuevaSolicitudKey(k => k + 1) }}
+          user={user}
+        />
       )
     }
-
     if (user.role.startsWith('banco')) {
-      return (
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <Button 
-            variant={currentPage === 'dashboard' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('dashboard')}
-          >
-            Dashboard
-          </Button>
-          <Button 
-            variant={currentPage === 'solicitudes' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('solicitudes')}
-          >
-            Solicitudes
-          </Button>
-          <Button 
-            variant={currentPage === 'ofertas' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('ofertas')}
-          >
-            Mis Ofertas
-          </Button>
-          {user.role === 'banco_admin' && (
-            <Button 
-              variant={currentPage === 'aprobaciones' ? 'primary' : 'secondary'}
-              onClick={() => setCurrentPage('aprobaciones')}
-            >
-              Aprobaciones
-            </Button>
-          )}
-          <Button 
-            variant={currentPage === 'compromisos' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('compromisos')}
-          >
-            Compromisos
-          </Button>
-          {user.role === 'banco_admin' && (
-            <Button 
-              variant={currentPage === 'clientes' ? 'primary' : 'secondary'}
-              onClick={() => setCurrentPage('clientes')}
-            >
-              Clientes
-            </Button>
-          )}
-          <Button
-            variant={currentPage === 'colocaciones' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('colocaciones')}
-          >
-            Colocaciones
-          </Button>
-          <Button
-            variant={currentPage === 'configuracion' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('configuracion')}
-          >
-            Configuración
-          </Button>
-          <Button
-            variant={currentPage === 'help' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('help')}
-          >
-            Help Desk
-          </Button>
-        </div>
-      )
+      return <BancoSidebar current={currentPage} go={go} user={user} />
     }
-
     if (user.role === 'webadmin') {
-      return (
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <Button 
-            variant={currentPage === 'dashboard' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('dashboard')}
-          >
-            Dashboard
-          </Button>
-          <Button 
-            variant={currentPage === 'usuarios' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('usuarios')}
-          >
-            Usuarios
-          </Button>
-          <Button 
-            variant={currentPage === 'aprobaciones' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('aprobaciones')}
-          >
-            Aprobaciones
-          </Button>
-          <Button 
-            variant={currentPage === 'compromisos' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('compromisos')}
-          >
-            Compromisos
-          </Button>
-          <Button 
-            variant={currentPage === 'sistema' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('sistema')}
-          >
-            Sistema
-          </Button>
-          <Button
-            variant={currentPage === 'auditoria' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('auditoria')}
-          >
-            Auditoría
-          </Button>
-          <Button
-            variant={currentPage === 'help' ? 'primary' : 'secondary'}
-            onClick={() => setCurrentPage('help')}
-          >
-            Help Desk
-          </Button>
-        </div>
-      )
+      return <WebAdminSidebar current={currentPage} go={go} />
     }
-
     return null
   }
 
   const getPage = () => {
     if (user.role.startsWith('cliente')) {
       switch (currentPage) {
-        case 'nueva-subasta':
-          return <NuevaSubasta onSubastaCreada={() => setCurrentPage('subastas')} />
-        case 'subastas':
-          return <ClienteSubastas />
-        case 'historial':
-          return <HistorialSubastas />
-        case 'compromisos':
-          return <ClienteCompromisos />
-        case 'vencimientos':
-          return <ClienteVencimientos />
-        case 'solicitudes':
-          return <ClienteSolicitudesColocacion />
-        case 'nueva-solicitud':
-          return <NuevaSolicitudColocacion key={nuevaSolicitudKey} onCreada={() => setCurrentPage('solicitudes')} />
-        case 'configuracion':
-          return <ClienteConfiguracion />
-        case 'help':
-          return <HelpDesk />
-        default:
-          return <ClienteDashboard onNavigate={(page) => setCurrentPage(page as Page)} />
+        case 'nueva-subasta':   return <NuevaSubasta onSubastaCreada={() => go('subastas')} />
+        case 'subastas':        return <ClienteSubastas />
+        case 'historial':       return <HistorialSubastas />
+        case 'compromisos':     return <ClienteCompromisos />
+        case 'vencimientos':    return <ClienteVencimientos />
+        case 'solicitudes':     return <ClienteSolicitudesColocacion />
+        case 'nueva-solicitud': return <NuevaSolicitudColocacion key={nuevaSolicitudKey} onCreada={() => go('solicitudes')} />
+        case 'configuracion':   return <ClienteConfiguracion />
+        case 'help':            return <HelpDesk />
+        default:                return <ClienteDashboard onNavigate={(page) => go(page as Page)} />
       }
     }
 
     if (user.role.startsWith('banco')) {
       switch (currentPage) {
-        case 'solicitudes':
-          return <BancoSolicitudes />
-        case 'ofertas':
-          return <BancoOfertas />
-        case 'aprobaciones':
-          return <BancoAprobaciones />
-        case 'compromisos':
-          return <BancoCompromisos />
-        case 'clientes':
-          return <BancoClientes />
-        case 'colocaciones':
-          return <BancoColocaciones />
-        case 'configuracion':
-          return <BancoConfiguracion />
-        case 'help':
-          return <HelpDesk />
-        default:
-          return <BancoDashboard onNavigate={setCurrentPage} />
+        case 'solicitudes':   return <BancoSolicitudes />
+        case 'ofertas':       return <BancoOfertas />
+        case 'aprobaciones':  return <BancoAprobaciones />
+        case 'compromisos':   return <BancoCompromisos />
+        case 'clientes':      return <BancoClientes />
+        case 'colocaciones':  return <BancoColocaciones />
+        case 'configuracion': return <BancoConfiguracion />
+        case 'help':          return <HelpDesk />
+        default:              return <BancoDashboard onNavigate={go} />
       }
     }
 
     if (user.role === 'webadmin') {
       switch (currentPage) {
-        case 'usuarios':
-          return <WebAdminUsuarios />
-        case 'aprobaciones':
-          return <WebAdminAprobaciones />
-        case 'compromisos':
-          return <WebAdminCompromisos />
-        case 'sistema':
-          return <WebAdminSistema />
-        case 'auditoria':
-          return <WebAdminAuditoria />
-        case 'help':
-          return <HelpDesk />
-        default:
-          return <WebAdminDashboard />
+        case 'usuarios':     return <WebAdminUsuarios />
+        case 'aprobaciones': return <WebAdminAprobaciones />
+        case 'compromisos':  return <WebAdminCompromisos />
+        case 'sistema':      return <WebAdminSistema />
+        case 'auditoria':    return <WebAdminAuditoria />
+        case 'help':         return <HelpDesk />
+        default:             return <WebAdminDashboard />
       }
     }
 
@@ -378,17 +350,14 @@ function App() {
 
   return (
     <>
-      <Layout>
-        {getNavigation()}
+      <Layout sidebar={getSidebar()}>
         {getPage()}
       </Layout>
 
-      {/* Modal para cambiar contraseña en primer login */}
       {mostrarCambioPassword && (
         <CambiarPasswordModal onSuccess={handlePasswordCambiado} />
       )}
 
-      {/* Toast notifications */}
       <Toaster
         position="top-right"
         toastOptions={{

@@ -301,10 +301,9 @@ export const ClienteVencimientos: React.FC = () => {
     return `Q${v}`
   }
 
-  // Maximo monto para las barras proporcionales
-  const maxMonto = useMemo(() => {
-    return Math.max(...buckets.map(b => b.totalGTQ + b.totalUSD * 8), 1)
-  }, [buckets])
+  // Referencia para las barras: total del portafolio (no el máximo del bucket)
+  // así cada barra muestra qué % del portafolio total vence en ese período
+  const refPortafolio = totales.totalPortafolio > 0 ? totales.totalPortafolio : 1
 
   if (loading) {
     return (
@@ -497,10 +496,6 @@ export const ClienteVencimientos: React.FC = () => {
           <div className="space-y-3">
             {buckets.map((bucket, idx) => {
               const hasItems = bucket.compromisos.length > 0
-              const barWidth = maxMonto > 0
-                ? Math.max(((bucket.totalGTQ + bucket.totalUSD * 8) / maxMonto) * 100, 2)
-                : 0
-
               // Determinar si esta semana/mes es la actual
               const hoy = new Date()
               const esCurrent = hoy >= bucket.startDate && hoy <= bucket.endDate
@@ -554,17 +549,17 @@ export const ClienteVencimientos: React.FC = () => {
                         <div className="flex h-full">
                           {bucket.totalGTQ > 0 && (
                             <div
-                              className="bg-green-500/60 h-full"
+                              className="bg-green-500/70 h-full"
                               style={{
-                                width: `${(bucket.totalGTQ / (bucket.totalGTQ + bucket.totalUSD * 8)) * barWidth}%`
+                                width: `${(bucket.totalGTQ / refPortafolio) * 100}%`
                               }}
                             />
                           )}
                           {bucket.totalUSD > 0 && (
                             <div
-                              className="bg-blue-500/60 h-full"
+                              className="bg-blue-500/70 h-full"
                               style={{
-                                width: `${(bucket.totalUSD * 8 / (bucket.totalGTQ + bucket.totalUSD * 8)) * barWidth}%`
+                                width: `${(bucket.totalUSD * GTQ_PER_USD / refPortafolio) * 100}%`
                               }}
                             />
                           )}

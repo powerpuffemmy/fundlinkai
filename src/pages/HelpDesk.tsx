@@ -539,6 +539,20 @@ const TabCapacitacion: React.FC<{ esBanco?: boolean; esCliente?: boolean }> = ({
         </div>
       )}
 
+      {/* Botón solicitar capacitación */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            const subject = encodeURIComponent('[FundLink AI] Solicitud de Capacitación')
+            const body = encodeURIComponent('Hola,\n\nMe gustaría solicitar una sesión de capacitación para mi equipo sobre el uso de FundLink AI.\n\nPor favor contáctenme para coordinar.\n\nGracias.')
+            window.open(`mailto:soporte@fundlink.gt?subject=${subject}&body=${body}`)
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)]/80 text-white text-sm font-semibold transition-colors"
+        >
+          🎓 Solicitar Capacitación
+        </button>
+      </div>
+
       {/* FAQ */}
       {seccion === 'faq' && (
         <div className="space-y-3">
