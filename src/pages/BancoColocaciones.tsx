@@ -188,8 +188,11 @@ export const BancoColocaciones: React.FC = () => {
                 <span className="text-[var(--muted)]">·</span>
                 <span className="text-white">{formatMoney(ofertaActiva.monto, sol.moneda)}</span>
                 {ofertaBadge(ofertaActiva.estado)}
-                {user?.role === 'banco_mesa' && (
+                {user?.role === 'banco_mesa' && !ofertaActiva.aprobada_por_admin && (
                   <span className="text-xs text-yellow-400">Pend. aprobación</span>
+                )}
+                {user?.role === 'banco_mesa' && ofertaActiva.aprobada_por_admin && (
+                  <span className="text-xs text-green-400">Aprobada</span>
                 )}
               </div>
             )}

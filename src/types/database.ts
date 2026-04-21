@@ -181,6 +181,7 @@ export interface OfertaColocacion {
   monto: number
   notas?: string
   estado: EstadoOfertaColocacion
+  aprobada_por_admin: boolean
   created_at: string
   updated_at: string
   banco?: { nombre: string; entidad: string }
