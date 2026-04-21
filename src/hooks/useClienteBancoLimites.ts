@@ -160,24 +160,20 @@ export const useClienteBancoLimites = () => {
     }
   }
 
-  // Obtener todos los bancos activos del cliente
+  // Obtener todos los bancos configurados para el cliente (sin filtro de monto)
   const obtenerTodosBancos = async (): Promise<BancoDisponible[]> => {
     try {
-      const { data, error } = await supabase
-        .rpc('obtener_todos_bancos')
+      if (!user) return []
 
-      // RPC returns { id, nombre, entidad } — map to BancoDisponible shape
-      if (!error && data && data.length > 0) {
-        return (data as any[]).map(b => ({
-          banco_id: b.id,
-          banco_nombre: b.nombre,
-          banco_entidad: b.entidad || b.nombre,
-          limite_monto: 0,
-          monto_utilizado: 0,
-          monto_disponible: 0,
-          todos_user_ids: [b.id],
-        }))
-      }
+      // Reutilizar obtener_bancos_disponibles con monto=0 para traer todos los
+      // bancos del cliente sin importar capacidad, ya filtra por entidad del cliente
+      const { data, error } = await supabase
+        .rpc('obtener_bancos_disponibles', {
+          p_cliente_id: user.id,
+          p_monto: 0
+        })
+
+      if (!error && data && data.length > 0) return data as BancoDisponible[]
 
       // Fallback: consulta directa
       return _fallbackLimitesDirectos()
