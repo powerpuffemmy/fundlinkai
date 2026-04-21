@@ -1,14 +1,16 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { useCompromisos } from '@/hooks/useCompromisos'
 import { useOfertas } from '@/hooks/useOfertas'
 import { useSubastas } from '@/hooks/useSubastas'
+import { useSolicitudesColocacion } from '@/hooks/useSolicitudesColocacion'
 import { useAuthStore } from '@/store/authStore'
+import { supabase } from '@/lib/supabase'
 import { formatMoney, formatDate, daysBetween, formatTipoSubasta } from '@/lib/utils'
 
 interface BancoDashboardProps {
-  onNavigate?: (page: 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'configuracion') => void
+  onNavigate?: (page: 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'colocaciones' | 'configuracion') => void
 }
 
 export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) => {
@@ -16,6 +18,15 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
   const { compromisos, loading: loadingCompromisos } = useCompromisos()
   const { ofertas, loading: loadingOfertas } = useOfertas()
   const { subastas, loading: loadingSubastas } = useSubastas()
+  const { solicitudes: solicitudesColocacion, loading: loadingColocaciones } = useSolicitudesColocacion()
+  const [pendientesAprobacion, setPendientesAprobacion] = useState(0)
+
+  useEffect(() => {
+    if (user?.role !== 'banco_admin') return
+    supabase.rpc('obtener_ofertas_colocacion_pendientes_admin').then(({ data }) => {
+      setPendientesAprobacion((data || []).length)
+    })
+  }, [user?.role])
 
   // Filtrar datos del banco
   const misCompromisos = compromisos.filter(c => c.banco_id === user?.id)
@@ -32,6 +43,12 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
   const montoTotalColocado = compromisosVigentes.reduce((sum, c) => sum + c.monto, 0)
   const ofertasEnviadas = misOfertas.length
   const ofertasAdjudicadas = misOfertas.filter(o => o.estado === 'adjudicada').length
+
+  // Métricas de colocaciones
+  const ahora = new Date()
+  const colSinOferta = solicitudesColocacion.filter(s => !s.ofertas || s.ofertas.length === 0)
+  const colConOferta = solicitudesColocacion.filter(s => s.ofertas && s.ofertas.length > 0)
+  const colAceptadas = solicitudesColocacion.filter(s => s.ofertas?.some(o => o.estado === 'aceptada'))
 
   // Obtener últimos 5 compromisos
   const ultimosCompromisos = misCompromisos
@@ -61,7 +78,7 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
     return badges[estado] || 'bg-gray-900/20 text-gray-200'
   }
 
-  const loading = loadingCompromisos || loadingOfertas || loadingSubastas
+  const loading = loadingCompromisos || loadingOfertas || loadingSubastas || loadingColocaciones
 
   if (loading) {
     return (
@@ -297,6 +314,79 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
           )}
         </Card>
       </div>
+
+      {/* Sección: Colocaciones Directas */}
+      <Card>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-bold text-lg">Colocaciones Directas</h3>
+          <Button variant="small" onClick={() => onNavigate?.('colocaciones')}>Ver todas</Button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="p-3 bg-white/5 rounded-lg text-center">
+            <div className="text-xs text-[var(--muted)] mb-1">Invitaciones</div>
+            <div className="text-xl font-black text-teal-400">{solicitudesColocacion.length}</div>
+          </div>
+          <div className="p-3 bg-white/5 rounded-lg text-center">
+            <div className="text-xs text-[var(--muted)] mb-1">Por Responder</div>
+            <div className="text-xl font-black text-yellow-400">{colSinOferta.length}</div>
+          </div>
+          <div className="p-3 bg-white/5 rounded-lg text-center">
+            <div className="text-xs text-[var(--muted)] mb-1">Con Oferta</div>
+            <div className="text-xl font-black text-blue-400">{colConOferta.length}</div>
+          </div>
+          {user?.role === 'banco_admin' ? (
+            <div className={`p-3 rounded-lg text-center ${pendientesAprobacion > 0 ? 'bg-yellow-900/20 border border-yellow-900/40' : 'bg-white/5'}`}>
+              <div className={`text-xs mb-1 ${pendientesAprobacion > 0 ? 'text-yellow-300' : 'text-[var(--muted)]'}`}>Pend. Aprobación</div>
+              <div className={`text-xl font-black ${pendientesAprobacion > 0 ? 'text-yellow-400' : ''}`}>{pendientesAprobacion}</div>
+            </div>
+          ) : (
+            <div className="p-3 bg-white/5 rounded-lg text-center">
+              <div className="text-xs text-[var(--muted)] mb-1">Aceptadas</div>
+              <div className="text-xl font-black text-green-400">{colAceptadas.length}</div>
+            </div>
+          )}
+        </div>
+
+        {solicitudesColocacion.length === 0 ? (
+          <p className="text-[var(--muted)] text-center py-4 text-sm">No tienes solicitudes de colocación asignadas</p>
+        ) : (
+          <div className="space-y-2">
+            {solicitudesColocacion.slice(0, 4).map(sol => {
+              const oferta = sol.ofertas?.[0]
+              const abierta = sol.estado === 'abierta' && new Date(sol.fecha_cierre) >= ahora
+              return (
+                <div key={sol.id} className="p-3 bg-white/5 rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold">{(sol as any).cliente?.entidad || '—'}</div>
+                    <div className="text-xs text-[var(--muted)]">
+                      {sol.monto ? formatMoney(sol.monto, sol.moneda) : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {!abierta ? (
+                      <span className="text-xs px-2 py-1 rounded bg-gray-900/30 text-gray-400">Cerrada</span>
+                    ) : !oferta ? (
+                      <span className="text-xs px-2 py-1 rounded bg-yellow-900/20 text-yellow-300">Sin respuesta</span>
+                    ) : oferta.estado === 'aceptada' ? (
+                      <span className="text-xs px-2 py-1 rounded bg-green-900/20 text-green-300">Aceptada {oferta.tasa}%</span>
+                    ) : oferta.estado === 'rechazada' ? (
+                      <span className="text-xs px-2 py-1 rounded bg-red-900/20 text-red-300">Rechazada</span>
+                    ) : (
+                      <div>
+                        <span className="text-xs px-2 py-1 rounded bg-blue-900/20 text-blue-300">{oferta.tasa}% enviada</span>
+                        {user?.role === 'banco_mesa' && !oferta.aprobada_por_admin && (
+                          <div className="text-xs text-yellow-400 mt-0.5">Pend. aprobación</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
 
       {/* Nota informativa según el rol */}
       {user?.role === 'banco_mesa' && (

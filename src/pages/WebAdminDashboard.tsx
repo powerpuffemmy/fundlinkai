@@ -17,7 +17,11 @@ export const WebAdminDashboard: React.FC = () => {
     compromisosVigentes: 0,
     volumenTotal: 0,
     volumenVigente: 0,
-    tasaPromedio: 0
+    tasaPromedio: 0,
+    solColocacionTotal: 0,
+    solColocacionAbiertas: 0,
+    ofertasColTotal: 0,
+    ofertasColPendientes: 0
   })
   const [loading, setLoading] = useState(true)
   const [actividadReciente, setActividadReciente] = useState<any[]>([])
@@ -70,6 +74,22 @@ export const WebAdminDashboard: React.FC = () => {
         ? compromisos!.filter(c => c.estado === 'vigente').reduce((sum, c) => sum + (c.tasa || 0), 0) / compromisosVigentes
         : 0
 
+      // Solicitudes de Colocación
+      const { data: solCol } = await supabase
+        .from('solicitudes_colocacion')
+        .select('id, estado')
+
+      const solColocacionTotal = solCol?.length || 0
+      const solColocacionAbiertas = solCol?.filter(s => s.estado === 'abierta').length || 0
+
+      // Ofertas de Colocación
+      const { data: ofertasCol } = await supabase
+        .from('ofertas_colocacion')
+        .select('id, aprobada_por_admin, estado')
+
+      const ofertasColTotal = ofertasCol?.length || 0
+      const ofertasColPendientes = ofertasCol?.filter(o => !o.aprobada_por_admin && o.estado === 'enviada').length || 0
+
       // Actividad reciente
       const { data: auditoria } = await supabase
         .from('auditoria')
@@ -90,7 +110,11 @@ export const WebAdminDashboard: React.FC = () => {
         compromisosVigentes,
         volumenTotal,
         volumenVigente,
-        tasaPromedio
+        tasaPromedio,
+        solColocacionTotal,
+        solColocacionAbiertas,
+        ofertasColTotal,
+        ofertasColPendientes
       })
 
       setActividadReciente(auditoria || [])
@@ -180,6 +204,41 @@ export const WebAdminDashboard: React.FC = () => {
             <div className="text-2xl font-black mt-1 text-green-400">
               {stats.tasaPromedio.toFixed(2)}%
             </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Colocaciones directas */}
+      <div>
+        <h3 className="font-semibold mb-3 text-sm text-[var(--muted)]">COLOCACIONES DIRECTAS</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <div className="text-sm text-[var(--muted)]">Solicitudes</div>
+            <div className="text-2xl font-black mt-1 text-teal-400">{stats.solColocacionTotal}</div>
+            <div className="text-xs text-green-400 mt-1">{stats.solColocacionAbiertas} abiertas</div>
+          </Card>
+          <Card>
+            <div className="text-sm text-[var(--muted)]">Ofertas Col.</div>
+            <div className="text-2xl font-black mt-1">{stats.ofertasColTotal}</div>
+            <div className="text-xs text-green-400 mt-1">
+              {stats.ofertasColTotal - stats.ofertasColPendientes} aprobadas
+            </div>
+          </Card>
+          <Card className={stats.ofertasColPendientes > 0 ? 'bg-yellow-900/10 border-yellow-900/40' : ''}>
+            <div className="text-sm text-[var(--muted)]">Pend. Aprobación</div>
+            <div className={`text-2xl font-black mt-1 ${stats.ofertasColPendientes > 0 ? 'text-yellow-400' : ''}`}>
+              {stats.ofertasColPendientes}
+            </div>
+            <div className="text-xs text-[var(--muted)] mt-1">Mesa → Admin</div>
+          </Card>
+          <Card>
+            <div className="text-sm text-[var(--muted)]">Tasa Conv. Col.</div>
+            <div className="text-2xl font-black mt-1 text-purple-400">
+              {stats.solColocacionTotal > 0
+                ? (((stats.solColocacionTotal - stats.solColocacionAbiertas) / stats.solColocacionTotal) * 100).toFixed(0)
+                : 0}%
+            </div>
+            <div className="text-xs text-[var(--muted)] mt-1">Solicitudes cerradas</div>
           </Card>
         </div>
       </div>

@@ -53,6 +53,12 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
     detalleOfertas: [], detalleCompromisos: []
   })
   const [loading, setLoading] = useState(true)
+  const [solColocacion, setSolColocacion] = useState({
+    abiertas: 0,
+    ofertasRecibidas: 0,
+    porDecidir: 0,
+    recientes: [] as { id: string; estado: string; plazo: number; moneda: string; monto: number | null; ofertaCount: number }[]
+  })
 
   useEffect(() => {
     if (!user) return
@@ -93,8 +99,9 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         // Solicitudes de colocación del cliente
         const { data: solicitudes } = await supabase
           .from('solicitudes_colocacion')
-          .select('id')
+          .select('id, estado, monto, plazo, moneda')
           .eq('cliente_id', user.id)
+          .order('created_at', { ascending: false })
 
         const solIds = (solicitudes || []).map((s: any) => s.id)
 
@@ -109,6 +116,33 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
             .gte('created_at', hoyStr)
           ofertasColHoy = data || []
         }
+
+        // Estadísticas de colocaciones para la sección del dashboard
+        const solArr = (solicitudes || []) as any[]
+        const abiertas = solArr.filter(s => s.estado === 'abierta').length
+        let todasOfertasAprobadas: any[] = []
+        if (solIds.length > 0) {
+          const { data: allOfertas } = await supabase
+            .from('ofertas_colocacion')
+            .select('solicitud_id, estado, aprobada_por_admin')
+            .in('solicitud_id', solIds)
+            .eq('aprobada_por_admin', true)
+          todasOfertasAprobadas = allOfertas || []
+        }
+        const porDecidir = todasOfertasAprobadas.filter(o => o.estado === 'enviada').length
+        setSolColocacion({
+          abiertas,
+          ofertasRecibidas: todasOfertasAprobadas.length,
+          porDecidir,
+          recientes: solArr.slice(0, 3).map(s => ({
+            id: s.id,
+            estado: s.estado,
+            plazo: s.plazo,
+            moneda: s.moneda,
+            monto: s.monto,
+            ofertaCount: todasOfertasAprobadas.filter(o => o.solicitud_id === s.id).length
+          }))
+        })
 
         // Compromisos nuevos hoy
         const compHoy = rows.filter(c => c.created_at >= hoyStr)
@@ -338,6 +372,61 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
                   <span className="text-[var(--muted)] font-mono text-xs">{c.op_id}</span>
                 </div>
                 <span className="font-semibold">{formatMoney(c.monto, c.moneda as Moneda)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* ── SOLICITUDES DE COLOCACIÓN ───────────────────────────────────── */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold">Solicitudes de Colocación</h3>
+          <button
+            onClick={() => onNavigate('solicitudes')}
+            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            Ver todas →
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
+            <div className="text-2xl font-black text-teal-400">{solColocacion.abiertas}</div>
+            <div className="text-xs text-[var(--muted)] mt-0.5">Abiertas</div>
+          </div>
+          <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
+            <div className="text-2xl font-black text-blue-400">{solColocacion.ofertasRecibidas}</div>
+            <div className="text-xs text-[var(--muted)] mt-0.5">Ofertas Recibidas</div>
+          </div>
+          <div className={`p-3 rounded-lg border text-center ${solColocacion.porDecidir > 0 ? 'bg-yellow-900/10 border-yellow-900/40' : 'bg-white/5 border-white/10'}`}>
+            <div className={`text-2xl font-black ${solColocacion.porDecidir > 0 ? 'text-yellow-400' : ''}`}>
+              {solColocacion.porDecidir}
+            </div>
+            <div className="text-xs text-[var(--muted)] mt-0.5">Por Decidir</div>
+          </div>
+        </div>
+
+        {solColocacion.recientes.length === 0 ? (
+          <p className="text-sm text-[var(--muted)] text-center py-2">No tienes solicitudes de colocación</p>
+        ) : (
+          <div className="space-y-2">
+            {solColocacion.recientes.map(s => (
+              <div key={s.id} className="flex items-center justify-between text-sm p-2 rounded bg-white/5">
+                <div>
+                  <span className="font-semibold">
+                    {s.monto ? formatMoney(s.monto, s.moneda as Moneda) : 'Monto libre'}
+                  </span>
+                  <span className="text-[var(--muted)] text-xs ml-2">· {s.plazo} días · {s.moneda}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {s.ofertaCount > 0 && (
+                    <span className="text-xs text-blue-300">{s.ofertaCount} oferta{s.ofertaCount !== 1 ? 's' : ''}</span>
+                  )}
+                  <span className={`text-xs px-2 py-0.5 rounded ${s.estado === 'abierta' ? 'bg-green-900/20 text-green-300' : 'bg-gray-900/20 text-gray-400'}`}>
+                    {s.estado}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
