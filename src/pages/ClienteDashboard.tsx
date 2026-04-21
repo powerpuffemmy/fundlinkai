@@ -8,7 +8,7 @@ import { Card } from '@/components/common/Card'
 import { CardSkeleton } from '@/components/common/Skeleton'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
-import { formatMoney, formatDate } from '@/lib/utils'
+import { formatMoney, formatDate, formatTipoSubasta } from '@/lib/utils'
 import { calcularVencimiento, getIconoVencimiento } from '@/lib/vencimientoUtils'
 import type { Moneda } from '@/types/database'
 
@@ -53,6 +53,8 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
     detalleOfertas: [], detalleCompromisos: []
   })
   const [loading, setLoading] = useState(true)
+  const [subastasActivas, setSubastasActivas] = useState<any[]>([])
+  const [ofertasBanco, setOfertasBanco] = useState<any[]>([])
   const [solColocacion, setSolColocacion] = useState({
     abiertas: 0,
     ofertasRecibidas: 0,
@@ -84,6 +86,27 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           .eq('cliente_id', user.id)
 
         const subIds = (subastas || []).map((s: any) => s.id)
+
+        // Subastas abiertas con detalle completo para el panel
+        const { data: subAbiertas } = await supabase
+          .from('subastas')
+          .select('id, op_id, tipo, monto, moneda, plazo, estado, expires_at, tasa_objetivo')
+          .eq('cliente_id', user.id)
+          .eq('estado', 'abierta')
+          .order('created_at', { ascending: false })
+          .limit(5)
+        setSubastasActivas(subAbiertas || [])
+
+        // Últimas ofertas de bancos en las subastas del cliente
+        if (subIds.length > 0) {
+          const { data: ofBanco } = await supabase
+            .from('ofertas')
+            .select('id, tasa, estado, created_at, subasta_id, banco:users!banco_id(nombre, entidad), subastas!subasta_id(op_id, monto, moneda)')
+            .in('subasta_id', subIds)
+            .order('created_at', { ascending: false })
+            .limit(6)
+          setOfertasBanco(ofBanco || [])
+        }
 
         // Ofertas de hoy en subastas
         let ofertasSubHoy: any[] = []
@@ -377,6 +400,101 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           </div>
         )}
       </Card>
+
+      {/* ── SUBASTAS Y OFERTAS DE BANCOS ────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Subastas Activas */}
+        <Card>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg">Subastas Activas</h3>
+            <button
+              onClick={() => onNavigate('subastas')}
+              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Ver todas →
+            </button>
+          </div>
+          {subastasActivas.length === 0 ? (
+            <p className="text-sm text-[var(--muted)] text-center py-6">No tienes subastas abiertas</p>
+          ) : (
+            <div className="space-y-2">
+              {subastasActivas.map(sub => {
+                const expira = sub.expires_at ? new Date(sub.expires_at) : null
+                const horasRestantes = expira ? Math.max(0, Math.floor((expira.getTime() - Date.now()) / 3600000)) : null
+                return (
+                  <div key={sub.id} className="p-3 bg-white/5 rounded-lg border border-blue-900/20">
+                    <div className="flex justify-between items-start mb-1">
+                      <div>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-900/40 mr-2">
+                          {formatTipoSubasta(sub.tipo)}
+                        </span>
+                        <span className="font-mono text-xs text-[var(--muted)]">{sub.op_id}</span>
+                      </div>
+                      {horasRestantes !== null && (
+                        <span className={`text-xs font-semibold ${horasRestantes <= 2 ? 'text-red-400' : horasRestantes <= 12 ? 'text-yellow-400' : 'text-[var(--muted)]'}`}>
+                          {horasRestantes}h restantes
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-sm mt-1">
+                      <span className="font-semibold">{formatMoney(sub.monto, sub.moneda)}</span>
+                      <span className="text-[var(--muted)]">{sub.plazo} días · {sub.moneda}</span>
+                    </div>
+                    {sub.tasa_objetivo && (
+                      <div className="text-xs text-[var(--good)] mt-0.5">Tasa objetivo: {sub.tasa_objetivo}%</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+
+        {/* Últimas Ofertas de Bancos */}
+        <Card>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg">Ofertas de Bancos</h3>
+            <button
+              onClick={() => onNavigate('subastas')}
+              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Ver subastas →
+            </button>
+          </div>
+          {ofertasBanco.length === 0 ? (
+            <p className="text-sm text-[var(--muted)] text-center py-6">No hay ofertas recibidas aún</p>
+          ) : (
+            <div className="space-y-2">
+              {ofertasBanco.map(oferta => {
+                const estadoStyles: Record<string, string> = {
+                  enviada: 'bg-blue-900/20 text-blue-300',
+                  aprobada: 'bg-green-900/20 text-green-300',
+                  adjudicada: 'bg-purple-900/20 text-purple-300',
+                  rechazada: 'bg-red-900/20 text-red-300',
+                }
+                const banco = Array.isArray(oferta.banco) ? oferta.banco[0] : oferta.banco
+                const subasta = Array.isArray(oferta.subastas) ? oferta.subastas[0] : oferta.subastas
+                return (
+                  <div key={oferta.id} className="p-3 bg-white/5 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold">{banco?.entidad || '—'}</div>
+                      <div className="text-xs text-[var(--muted)]">
+                        {subasta?.op_id} · {subasta?.monto ? formatMoney(subasta.monto, subasta.moneda) : '—'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-[var(--good)]">{oferta.tasa}%</div>
+                      <span className={`text-xs px-2 py-0.5 rounded ${estadoStyles[oferta.estado] || 'bg-gray-900/20 text-gray-400'}`}>
+                        {oferta.estado}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* ── SOLICITUDES DE COLOCACIÓN ───────────────────────────────────── */}
       <Card>
