@@ -293,8 +293,8 @@ export const BancoClientes: React.FC = () => {
 
       {/* Modal de documentos KYC */}
       {clienteSeleccionado && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="max-w-3xl w-full max-h-[80vh] overflow-y-auto !bg-[#12151f] border-white/10">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-xl font-bold">{clienteSeleccionado.entidad}</h3>
