@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
+import {
+  Home, Plus, ClipboardList, Building2, History, LayoutList,
+  FileText, CalendarDays, Settings, HelpCircle, Send,
+  Landmark, CheckCircle2, Users, Monitor, Search, ChevronDown, ChevronRight,
+} from 'lucide-react'
 import { useAuthStore } from './store/authStore'
 import { LoginPage } from './components/auth/LoginPage'
 import { Layout } from './components/common/Layout'
@@ -37,12 +42,14 @@ type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'com
 type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones' | 'help'
 type Page = ClientePage | BancoPage | WebAdminPage
 
+type IconComponent = React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
+
 // ─── Sidebar helpers ─────────────────────────────────────────────────────────
 
 function NavItem({
-  icon, label, active, onClick, indent = false,
+  icon: Icon, label, active, onClick, indent = false,
 }: {
-  icon: string; label: string; active: boolean; onClick: () => void; indent?: boolean
+  icon: IconComponent; label: string; active: boolean; onClick: () => void; indent?: boolean
 }) {
   return (
     <button
@@ -56,16 +63,16 @@ function NavItem({
         }
       `}
     >
-      <span className="text-base leading-none flex-shrink-0">{icon}</span>
+      <Icon size={16} strokeWidth={1.75} className="flex-shrink-0" />
       <span className="truncate">{label}</span>
     </button>
   )
 }
 
 function NavGroup({
-  icon, label, children, defaultOpen = true,
+  icon: Icon, label, children, defaultOpen = true,
 }: {
-  icon: string; label: string; children: React.ReactNode; defaultOpen?: boolean
+  icon: IconComponent; label: string; children: React.ReactNode; defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
@@ -75,10 +82,13 @@ function NavGroup({
         className="w-full flex items-center justify-between pl-4 pr-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className="text-base leading-none">{icon}</span>
+          <Icon size={16} strokeWidth={1.75} className="flex-shrink-0" />
           <span className="font-semibold">{label}</span>
         </div>
-        <span className="text-[10px] text-[var(--muted)]">{open ? '▾' : '▸'}</span>
+        {open
+          ? <ChevronDown size={13} strokeWidth={2} className="text-[var(--muted)]" />
+          : <ChevronRight size={13} strokeWidth={2} className="text-[var(--muted)]" />
+        }
       </button>
       {open && <div>{children}</div>}
     </div>
@@ -98,88 +108,78 @@ function NavDivider({ label }: { label?: string }) {
 
 // ─── Sidebars por rol ────────────────────────────────────────────────────────
 
-function ClienteSidebar({
-  current, go, goNuevaSolicitud, user,
-}: {
-  current: Page
-  go: (p: Page) => void
-  goNuevaSolicitud: () => void
-  user: User
+function ClienteSidebar({ current, go, goNuevaSolicitud, user }: {
+  current: Page; go: (p: Page) => void; goNuevaSolicitud: () => void; user: User
 }) {
   const rolLabel = user.role === 'cliente_admin' ? 'Admin' : 'Usuario'
   return (
     <nav className="py-4 flex flex-col gap-0.5">
-      {/* Role badge */}
-      <div className="px-4 pb-3 flex items-center gap-2">
+      <div className="px-4 pb-3">
         <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30 font-semibold">
           Cliente · {rolLabel}
         </span>
       </div>
 
-      <NavItem icon="🏠" label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
+      <NavItem icon={Home} label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
 
       <NavDivider label="Colocaciones" />
-      <NavItem icon="➕" label="Nueva Solicitud" active={current === 'nueva-solicitud'} onClick={goNuevaSolicitud} />
-      <NavItem icon="📋" label="Mis Solicitudes" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
+      <NavItem icon={Plus} label="Nueva Solicitud" active={current === 'nueva-solicitud'} onClick={goNuevaSolicitud} />
+      <NavItem icon={ClipboardList} label="Mis Solicitudes" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
 
       <NavDivider label="Subastas" />
-      <NavGroup icon="🏛️" label="Subastas">
-        <NavItem indent icon="➕" label="Nueva Subasta" active={current === 'nueva-subasta'} onClick={() => go('nueva-subasta')} />
-        <NavItem indent icon="📑" label="Mis Subastas" active={current === 'subastas'} onClick={() => go('subastas')} />
-        <NavItem indent icon="📜" label="Historial" active={current === 'historial'} onClick={() => go('historial')} />
+      <NavGroup icon={Building2} label="Subastas">
+        <NavItem indent icon={Plus} label="Nueva Subasta" active={current === 'nueva-subasta'} onClick={() => go('nueva-subasta')} />
+        <NavItem indent icon={LayoutList} label="Mis Subastas" active={current === 'subastas'} onClick={() => go('subastas')} />
+        <NavItem indent icon={History} label="Historial" active={current === 'historial'} onClick={() => go('historial')} />
       </NavGroup>
 
       <NavDivider label="Seguimiento" />
-      <NavItem icon="📄" label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
-      <NavItem icon="📅" label="Vencimientos" active={current === 'vencimientos'} onClick={() => go('vencimientos')} />
+      <NavItem icon={FileText} label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
+      <NavItem icon={CalendarDays} label="Vencimientos" active={current === 'vencimientos'} onClick={() => go('vencimientos')} />
 
       <NavDivider />
-      <NavItem icon="⚙️" label="Configuración" active={current === 'configuracion'} onClick={() => go('configuracion')} />
-      <NavItem icon="❓" label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
+      <NavItem icon={Settings} label="Configuración" active={current === 'configuracion'} onClick={() => go('configuracion')} />
+      <NavItem icon={HelpCircle} label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
     </nav>
   )
 }
 
-function BancoSidebar({
-  current, go, user,
-}: {
-  current: Page
-  go: (p: Page) => void
-  user: User
+function BancoSidebar({ current, go, user }: {
+  current: Page; go: (p: Page) => void; user: User
 }) {
   const isAdmin = user.role === 'banco_admin'
   const rolLabel = user.role === 'banco_admin' ? 'Admin' : user.role === 'banco_mesa' ? 'Mesa' : 'Auditor'
   return (
     <nav className="py-4 flex flex-col gap-0.5">
-      <div className="px-4 pb-3 flex items-center gap-2">
+      <div className="px-4 pb-3">
         <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold">
           Banco · {rolLabel}
         </span>
       </div>
 
-      <NavItem icon="🏠" label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
+      <NavItem icon={Home} label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
 
       <NavDivider label="Mercado" />
-      <NavGroup icon="📋" label="Solicitudes & Ofertas">
-        <NavItem indent icon="📋" label="Subastas Activas" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
-        <NavItem indent icon="📤" label="Mis Ofertas" active={current === 'ofertas'} onClick={() => go('ofertas')} />
+      <NavGroup icon={ClipboardList} label="Solicitudes y Ofertas">
+        <NavItem indent icon={ClipboardList} label="Subastas Activas" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
+        <NavItem indent icon={Send} label="Mis Ofertas" active={current === 'ofertas'} onClick={() => go('ofertas')} />
       </NavGroup>
-      <NavItem icon="🏦" label="Colocaciones" active={current === 'colocaciones'} onClick={() => go('colocaciones')} />
+      <NavItem icon={Landmark} label="Colocaciones" active={current === 'colocaciones'} onClick={() => go('colocaciones')} />
 
       {isAdmin && (
         <>
           <NavDivider label="Gestión" />
-          <NavItem icon="✅" label="Aprobaciones" active={current === 'aprobaciones'} onClick={() => go('aprobaciones')} />
-          <NavItem icon="👥" label="Clientes" active={current === 'clientes'} onClick={() => go('clientes')} />
+          <NavItem icon={CheckCircle2} label="Aprobaciones" active={current === 'aprobaciones'} onClick={() => go('aprobaciones')} />
+          <NavItem icon={Users} label="Clientes" active={current === 'clientes'} onClick={() => go('clientes')} />
         </>
       )}
 
       <NavDivider label="Operaciones" />
-      <NavItem icon="📄" label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
+      <NavItem icon={FileText} label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
 
       <NavDivider />
-      <NavItem icon="⚙️" label="Configuración" active={current === 'configuracion'} onClick={() => go('configuracion')} />
-      <NavItem icon="❓" label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
+      <NavItem icon={Settings} label="Configuración" active={current === 'configuracion'} onClick={() => go('configuracion')} />
+      <NavItem icon={HelpCircle} label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
     </nav>
   )
 }
@@ -187,29 +187,29 @@ function BancoSidebar({
 function WebAdminSidebar({ current, go }: { current: Page; go: (p: Page) => void }) {
   return (
     <nav className="py-4 flex flex-col gap-0.5">
-      <div className="px-4 pb-3 flex items-center gap-2">
+      <div className="px-4 pb-3">
         <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
           Web Admin
         </span>
       </div>
 
-      <NavItem icon="🏠" label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
+      <NavItem icon={Home} label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
 
       <NavDivider label="Usuarios" />
-      <NavItem icon="👥" label="Usuarios" active={current === 'usuarios'} onClick={() => go('usuarios')} />
-      <NavItem icon="✅" label="Aprobaciones" active={current === 'aprobaciones'} onClick={() => go('aprobaciones')} />
+      <NavItem icon={Users} label="Usuarios" active={current === 'usuarios'} onClick={() => go('usuarios')} />
+      <NavItem icon={CheckCircle2} label="Aprobaciones" active={current === 'aprobaciones'} onClick={() => go('aprobaciones')} />
 
       <NavDivider label="Operaciones" />
-      <NavItem icon="📄" label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
+      <NavItem icon={FileText} label="Compromisos" active={current === 'compromisos'} onClick={() => go('compromisos')} />
 
       <NavDivider label="Plataforma" />
-      <NavGroup icon="🖥️" label="Sistema & Auditoría">
-        <NavItem indent icon="🖥️" label="Sistema" active={current === 'sistema'} onClick={() => go('sistema')} />
-        <NavItem indent icon="🔍" label="Auditoría" active={current === 'auditoria'} onClick={() => go('auditoria')} />
+      <NavGroup icon={Monitor} label="Sistema y Auditoría">
+        <NavItem indent icon={Monitor} label="Sistema" active={current === 'sistema'} onClick={() => go('sistema')} />
+        <NavItem indent icon={Search} label="Auditoría" active={current === 'auditoria'} onClick={() => go('auditoria')} />
       </NavGroup>
 
       <NavDivider />
-      <NavItem icon="❓" label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
+      <NavItem icon={HelpCircle} label="Help Desk" active={current === 'help'} onClick={() => go('help')} />
     </nav>
   )
 }
@@ -222,9 +222,7 @@ function App() {
   const [nuevaSolicitudKey, setNuevaSolicitudKey] = useState(0)
   const [mostrarCambioPassword, setMostrarCambioPassword] = useState(false)
 
-  useEffect(() => {
-    initialize()
-  }, [])
+  useEffect(() => { initialize() }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -235,15 +233,11 @@ function App() {
   }, [user])
 
   useEffect(() => {
-    if (user && user.primer_login) {
-      setMostrarCambioPassword(true)
-    }
+    if (user && user.primer_login) setMostrarCambioPassword(true)
   }, [user])
 
   const handlePasswordCambiado = async () => {
-    if (user) {
-      await supabase.from('users').update({ primer_login: false }).eq('id', user.id)
-    }
+    if (user) await supabase.from('users').update({ primer_login: false }).eq('id', user.id)
     setMostrarCambioPassword(false)
     window.location.reload()
   }
@@ -287,19 +281,14 @@ function App() {
     if (user.role.startsWith('cliente')) {
       return (
         <ClienteSidebar
-          current={currentPage}
-          go={go}
+          current={currentPage} go={go}
           goNuevaSolicitud={() => { go('nueva-solicitud'); setNuevaSolicitudKey(k => k + 1) }}
           user={user}
         />
       )
     }
-    if (user.role.startsWith('banco')) {
-      return <BancoSidebar current={currentPage} go={go} user={user} />
-    }
-    if (user.role === 'webadmin') {
-      return <WebAdminSidebar current={currentPage} go={go} />
-    }
+    if (user.role.startsWith('banco')) return <BancoSidebar current={currentPage} go={go} user={user} />
+    if (user.role === 'webadmin')      return <WebAdminSidebar current={currentPage} go={go} />
     return null
   }
 
@@ -318,7 +307,6 @@ function App() {
         default:                return <ClienteDashboard onNavigate={(page) => go(page as Page)} />
       }
     }
-
     if (user.role.startsWith('banco')) {
       switch (currentPage) {
         case 'solicitudes':   return <BancoSolicitudes />
@@ -332,7 +320,6 @@ function App() {
         default:              return <BancoDashboard onNavigate={go} />
       }
     }
-
     if (user.role === 'webadmin') {
       switch (currentPage) {
         case 'usuarios':     return <WebAdminUsuarios />
@@ -344,7 +331,6 @@ function App() {
         default:             return <WebAdminDashboard />
       }
     }
-
     return <div>Rol no reconocido</div>
   }
 
@@ -362,11 +348,7 @@ function App() {
         position="top-right"
         toastOptions={{
           duration: 3000,
-          style: {
-            background: '#1a1a2e',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          },
+          style: { background: '#1a1a2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' },
         }}
       />
     </>

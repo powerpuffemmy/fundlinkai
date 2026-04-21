@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Lock, Lightbulb } from 'lucide-react'
 import { Button } from './Button'
 import { Input } from './Input'
 import { supabase } from '@/lib/supabase'
@@ -57,7 +58,7 @@ export const CambiarPasswordModal: React.FC<CambiarPasswordModalProps> = ({ onSu
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-[var(--card)] border border-[var(--line)] rounded-lg max-w-md w-full p-6">
-        <h3 className="text-xl font-bold mb-2">🔐 Cambiar Contraseña</h3>
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Lock size={20} strokeWidth={1.75} /> Cambiar Contraseña</h3>
         <p className="text-[var(--muted)] text-sm mb-6">
           Por seguridad, te recomendamos cambiar tu contraseña temporal.
         </p>
@@ -119,8 +120,9 @@ export const CambiarPasswordModal: React.FC<CambiarPasswordModalProps> = ({ onSu
         </form>
 
         <div className="mt-4 p-3 bg-blue-900/20 border border-blue-900/50 rounded-lg">
-          <p className="text-xs text-blue-200">
-            💡 <strong>Consejo:</strong> Usa una contraseña segura con letras, números y símbolos.
+          <p className="text-xs text-blue-200 flex items-start gap-2">
+            <Lightbulb size={14} strokeWidth={1.75} className="flex-shrink-0 mt-0.5" />
+            <span><strong>Consejo:</strong> Usa una contraseña segura con letras, números y símbolos.</span>
           </p>
         </div>
       </div>

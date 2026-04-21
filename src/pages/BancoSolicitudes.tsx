@@ -212,7 +212,7 @@ export const BancoSolicitudes: React.FC = () => {
             </div>
             {user?.ai_pro && subasta.tasa_objetivo && (
               <div className="flex justify-between items-center mt-3 p-2 bg-purple-900/20 border border-purple-500/30 rounded">
-                <span className="text-purple-200 text-xs">⭐ Tasa Objetivo:</span>
+                <span className="text-purple-200 text-xs">Tasa Objetivo:</span>
                 <span className="font-bold text-purple-200">{subasta.tasa_objetivo}%</span>
               </div>
             )}
@@ -340,7 +340,7 @@ export const BancoSolicitudes: React.FC = () => {
               <strong className="text-xs">{formatDateTime(subasta.expires_at)}</strong>
             </span>
             {subastasConOferta.has(subasta.id) && (
-              <span className="text-[var(--good)] font-semibold">✓ Ofertada</span>
+              <span className="text-[var(--good)] font-semibold text-xs">Ofertada</span>
             )}
           </div>
         </div>

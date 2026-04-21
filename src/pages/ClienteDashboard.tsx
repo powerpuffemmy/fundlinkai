@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import {
+  AlertTriangle, TrendingUp, FileText, CalendarDays,
+  Landmark, LayoutList, FolderOpen,
+} from 'lucide-react'
 import { Card } from '@/components/common/Card'
 import { CardSkeleton } from '@/components/common/Skeleton'
 import { useAuthStore } from '@/store/authStore'
@@ -284,7 +288,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           <div className={`text-2xl font-black mt-1 ${proximosVencer.length > 0 ? 'text-red-400' : ''}`}>
             {proximosVencer.length}
           </div>
-          {proximosVencer.length > 0 && <div className="text-xs text-red-300 mt-1">⚠ 15 días</div>}
+          {proximosVencer.length > 0 && <div className="text-xs text-red-300 mt-1 flex items-center gap-1"><AlertTriangle size={11} strokeWidth={2} /> 15 días</div>}
         </Card>
       </div>
 
@@ -344,7 +348,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
       {proximosVencer.length > 0 && (
         <Card className="bg-red-900/10 border-red-900/50">
           <div className="flex items-start gap-3">
-            <div className="text-2xl">⚠️</div>
+            <AlertTriangle size={24} strokeWidth={1.75} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-bold mb-2 text-red-400">
                 {proximosVencer.length} compromiso(s) vence(n) en 15 días
@@ -425,19 +429,21 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         <h3 className="font-bold mb-3">Accesos Rápidos</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
-            { icon: '💰', label: 'Nueva Subasta',   sub: 'Solicitar colocación',    page: 'nueva-subasta' },
-            { icon: '📋', label: 'Compromisos',      sub: 'Ver contratos vigentes',  page: 'compromisos'  },
-            { icon: '📅', label: 'Vencimientos',     sub: 'Calendario y flujos',     page: 'vencimientos' },
-            { icon: '🏦', label: 'Solicitudes',       sub: 'Solicitudes directas',    page: 'solicitudes'  },
-            { icon: '📊', label: 'Mis Subastas',     sub: 'Ver subastas activas',    page: 'subastas'     },
-            { icon: '📁', label: 'Historial',        sub: 'Subastas finalizadas',    page: 'historial'    },
-          ].map(({ icon, label, sub, page }) => (
+            { Icon: TrendingUp,  label: 'Nueva Subasta',  sub: 'Solicitar colocación',   page: 'nueva-subasta' },
+            { Icon: FileText,    label: 'Compromisos',     sub: 'Ver contratos vigentes', page: 'compromisos'   },
+            { Icon: CalendarDays,label: 'Vencimientos',    sub: 'Calendario y flujos',    page: 'vencimientos'  },
+            { Icon: Landmark,    label: 'Solicitudes',     sub: 'Solicitudes directas',   page: 'solicitudes'   },
+            { Icon: LayoutList,  label: 'Mis Subastas',   sub: 'Ver subastas activas',   page: 'subastas'      },
+            { Icon: FolderOpen,  label: 'Historial',      sub: 'Subastas finalizadas',   page: 'historial'     },
+          ].map(({ Icon, label, sub, page }) => (
             <button
               key={page}
               onClick={() => onNavigate(page)}
               className="p-3 bg-white/5 rounded-lg border border-white/10 hover:border-blue-500/50 hover:bg-blue-900/10 cursor-pointer transition-colors text-left"
             >
-              <div className="font-semibold mb-1">{icon} {label}</div>
+              <div className="font-semibold mb-1 flex items-center gap-2">
+                <Icon size={15} strokeWidth={1.75} className="text-[var(--primary)]" /> {label}
+              </div>
               <div className="text-sm text-[var(--muted)]">{sub}</div>
             </button>
           ))}

@@ -85,7 +85,7 @@ export const BancoConfiguracion: React.FC = () => {
 
           <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
             <p className="text-sm text-blue-400">
-              <strong>💡 Tip:</strong> Tu logo aparecerá en los contratos (PDF) de los compromisos que tu banco genere con los clientes.
+              <strong>Tip:</strong> Tu logo aparecerá en los contratos (PDF) de los compromisos que tu banco genere con los clientes.
             </p>
           </div>
         </Card>

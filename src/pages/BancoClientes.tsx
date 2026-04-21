@@ -374,7 +374,7 @@ export const BancoClientes: React.FC = () => {
                           rel="noopener noreferrer"
                           className="inline-block px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
                         >
-                          📄 Ver Documento
+                          Ver Documento
                         </a>
                       </div>
                     </div>

@@ -209,7 +209,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
 
             <form onSubmit={handleSiguiente} className="space-y-4">
               <div className="p-3 rounded border text-xs bg-purple-900/10 border-purple-900/30 text-purple-300">
-                📋 El banco recibirá tu solicitud y responderá con una <strong>tasa cierre</strong> y el monto que puede colocar.
+                El banco recibirá tu solicitud y responderá con una <strong>tasa cierre</strong> y el monto que puede colocar.
               </div>
 
               <Select

@@ -1,4 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
+import {
+  BookOpen, Bot, GraduationCap, Mail, Search, AlertTriangle,
+  Clock, Zap, ChevronDown, ChevronUp, Rocket, ClipboardList,
+  Building2, FileText, Landmark, Users, Send, GraduationCapIcon,
+} from 'lucide-react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { useAuthStore } from '@/store/authStore'
@@ -11,25 +16,36 @@ interface ChatMsg {
   content: string
 }
 
+type SectionIconKey = 'rocket' | 'clipboard' | 'building2' | 'filetext' | 'landmark' | 'users'
+
+const SECTION_ICONS: Record<SectionIconKey, React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
+  rocket:    Rocket,
+  clipboard: ClipboardList,
+  building2: Building2,
+  filetext:  FileText,
+  landmark:  Landmark,
+  users:     Users,
+}
+
 // ─── Manual accordion ───────────────────────────────────────────────────────
 const MANUAL_SECTIONS = [
   {
     id: 'primeros-pasos',
-    icono: '🚀',
+    iconKey: 'rocket' as SectionIconKey,
     titulo: 'Primeros Pasos',
     items: [
       { sub: 'Ingresar al sistema', texto: 'Accede con tu correo y contraseña en la pantalla de inicio. En tu primer login el sistema te pedirá cambiar la contraseña temporal.' },
       { sub: 'Cambio de contraseña inicial', texto: 'Al ingresar por primera vez verás un modal obligatorio para establecer tu contraseña definitiva. Elige una contraseña segura de al menos 8 caracteres.' },
-      { sub: 'Navegación', texto: 'El menú superior muestra las secciones disponibles según tu rol. Haz clic en cualquier botón para navegar entre secciones. El botón activo se resalta en azul.' },
+      { sub: 'Navegación', texto: 'El menú lateral izquierdo muestra las secciones disponibles según tu rol. Haz clic en cualquier ítem para navegar entre secciones. El ítem activo se resalta en azul.' },
     ],
   },
   {
     id: 'solicitudes',
-    icono: '📋',
+    iconKey: 'clipboard' as SectionIconKey,
     titulo: 'Solicitudes de Colocación',
     items: [
       { sub: 'Crear una solicitud', texto: 'Ve a "Nueva Solicitud" en el menú. Completa los parámetros: moneda (GTQ/USD), monto (opcional), plazo, tasa objetivo/cierre y fecha de cierre. Avanza al paso 2 para seleccionar los bancos destinatarios.' },
-      { sub: 'Tipos de tasa', texto: '"Tasa Cierre" es la tasa firme y definitiva que el banco propone. "Tasa Objetivo" es la tasa referencial que buscas — los bancos la verán como meta al preparar su oferta.' },
+      { sub: 'Tipos de tasa', texto: '"Tasa en Firme / Cierre" es la tasa firme y definitiva que el banco propone. "Tasa Indicativa / Objetivo" es la tasa referencial que buscas — los bancos la verán como meta al preparar su oferta.' },
       { sub: 'Selección de bancos', texto: 'En el paso 2 verás todos los bancos activos en tu configuración. Puedes enviar a todos o seleccionar solo algunos. Confirma para despachar la solicitud.' },
       { sub: 'Gestionar ofertas', texto: 'En "Mis Solicitudes" verás las ofertas recibidas bajo cada solicitud abierta. Expande una solicitud para ver tasa, monto y banco ofertante.' },
       { sub: 'Aceptar o rechazar', texto: 'Al aceptar una oferta se crea automáticamente un Compromiso y se rechazan las demás ofertas pendientes. Al rechazar, el banco es notificado y la solicitud sigue abierta para otras ofertas.' },
@@ -37,7 +53,7 @@ const MANUAL_SECTIONS = [
   },
   {
     id: 'subastas',
-    icono: '🏛️',
+    iconKey: 'building2' as SectionIconKey,
     titulo: 'Subastas Competitivas',
     items: [
       { sub: 'Crear una subasta', texto: 'Ve a "Nueva Subasta". Define moneda, monto, plazo y tasa objetivo (referencial). La subasta es enviada a todos los bancos activos de tu configuración.' },
@@ -48,7 +64,7 @@ const MANUAL_SECTIONS = [
   },
   {
     id: 'compromisos',
-    icono: '📄',
+    iconKey: 'filetext' as SectionIconKey,
     titulo: 'Compromisos y Vencimientos',
     items: [
       { sub: '¿Qué es un Compromiso?', texto: 'Un Compromiso es la constancia de intención generada cuando se acepta una oferta. Documenta al banco, al cliente, la tasa, el monto, el plazo y las fechas pactadas. No es un contrato vinculante — las partes deben formalizarlo directamente.' },
@@ -59,7 +75,7 @@ const MANUAL_SECTIONS = [
   },
   {
     id: 'bancos',
-    icono: '🏦',
+    iconKey: 'landmark' as SectionIconKey,
     titulo: 'Para Bancos',
     items: [
       { sub: 'Ver solicitudes recibidas', texto: 'En "Colocaciones" verás todas las solicitudes enviadas por clientes. Las solicitudes activas aparecen en la sección superior; las históricas están colapsables al final.' },
@@ -71,7 +87,7 @@ const MANUAL_SECTIONS = [
   },
   {
     id: 'roles',
-    icono: '👥',
+    iconKey: 'users' as SectionIconKey,
     titulo: 'Roles y Permisos',
     items: [
       { sub: 'cliente_admin', texto: 'Acceso completo de cliente: crear solicitudes y subastas, aceptar/rechazar ofertas, gestionar compromisos y configuración. Puede crear usuarios cliente_usuario para su entidad.' },
@@ -89,7 +105,7 @@ const GUIA_CLIENTE = [
   {
     titulo: 'Tu primera Solicitud de Colocación',
     pasos: [
-      'Haz clic en "Nueva Solicitud" en el menú superior.',
+      'Haz clic en "Nueva Solicitud" en el menú lateral.',
       'Selecciona la moneda (GTQ o USD) y define el plazo de inversión.',
       'Si tienes un monto específico actívalo; si no, déjalo libre para que el banco proponga.',
       'Indica la tasa objetivo (referencial) o cierre si ya tienes una meta.',
@@ -184,41 +200,37 @@ export const HelpDesk: React.FC = () => {
   const esBanco = user?.role.startsWith('banco')
   const esCliente = user?.role.startsWith('cliente')
 
-  const tabs: { id: HelpTab; label: string; icono: string }[] = [
-    { id: 'manual',       label: 'Manual',       icono: '📖' },
-    { id: 'chat',         label: 'Chat IA',       icono: '🤖' },
-    { id: 'capacitacion', label: 'Capacitación',  icono: '🎓' },
-    { id: 'contacto',     label: 'Contacto',      icono: '✉️' },
+  const tabs: { id: HelpTab; label: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }> }[] = [
+    { id: 'manual',       label: 'Manual',      Icon: BookOpen      },
+    { id: 'chat',         label: 'Chat IA',      Icon: Bot           },
+    { id: 'capacitacion', label: 'Capacitación', Icon: GraduationCap },
+    { id: 'contacto',     label: 'Contacto',     Icon: Mail          },
   ]
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold">Help Desk</h2>
-        <p className="text-[var(--muted)] mt-1">
-          Soporte, documentación y asistencia para FundLink AI
-        </p>
+        <p className="text-[var(--muted)] mt-1">Soporte, documentación y asistencia para FundLink AI</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 border-b border-[var(--line)] pb-0 overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
               tab === t.id
                 ? 'border-[var(--primary)] text-[var(--primary)]'
                 : 'border-transparent text-[var(--muted)] hover:text-white'
             }`}
           >
-            {t.icono} {t.label}
+            <t.Icon size={15} strokeWidth={1.75} />
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* Content */}
       {tab === 'manual'       && <TabManual />}
       {tab === 'chat'         && <TabChat />}
       {tab === 'capacitacion' && <TabCapacitacion esBanco={esBanco} esCliente={esCliente} />}
@@ -244,9 +256,8 @@ const TabManual: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Buscador */}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]">🔍</span>
+        <Search size={15} strokeWidth={1.75} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
         <input
           type="text"
           placeholder="Buscar en el manual..."
@@ -265,31 +276,29 @@ const TabManual: React.FC = () => {
       ) : (
         secciones.map(sec => {
           const isOpen = abierto === sec.id
+          const SectionIcon = SECTION_ICONS[sec.iconKey]
           return (
             <Card key={sec.id} className="!p-0 overflow-hidden">
-              {/* Header acordeón */}
               <button
                 className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors text-left"
                 onClick={() => setAbierto(isOpen ? null : sec.id)}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{sec.icono}</span>
+                  <SectionIcon size={18} strokeWidth={1.75} className="text-[var(--primary)] flex-shrink-0" />
                   <span className="font-semibold">{sec.titulo}</span>
                 </div>
-                <span className="text-[var(--muted)] text-sm">{isOpen ? '▲' : '▼'}</span>
+                {isOpen
+                  ? <ChevronUp size={15} strokeWidth={2} className="text-[var(--muted)]" />
+                  : <ChevronDown size={15} strokeWidth={2} className="text-[var(--muted)]" />
+                }
               </button>
 
-              {/* Contenido */}
               {isOpen && (
                 <div className="border-t border-[var(--line)] px-5 pb-5 pt-4 space-y-4">
                   {sec.items.map((item, idx) => (
                     <div key={idx}>
-                      <div className="text-sm font-semibold text-[var(--primary)] mb-1">
-                        {item.sub}
-                      </div>
-                      <p className="text-sm text-[var(--muted)] leading-relaxed">
-                        {item.texto}
-                      </p>
+                      <div className="text-sm font-semibold text-[var(--primary)] mb-1">{item.sub}</div>
+                      <p className="text-sm text-[var(--muted)] leading-relaxed">{item.texto}</p>
                     </div>
                   ))}
                 </div>
@@ -367,28 +376,26 @@ const TabChat: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <Card className="!p-0 overflow-hidden">
-        {/* Chat header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--line)] bg-white/[0.02]">
-          <div className="w-8 h-8 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center text-sm">
-            🤖
+          <div className="w-8 h-8 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center">
+            <Bot size={16} strokeWidth={1.75} className="text-[var(--primary)]" />
           </div>
           <div>
             <div className="text-sm font-semibold">Asistente FundLink AI</div>
             <div className="text-xs text-[var(--muted)]">Responde sobre el uso de la plataforma</div>
           </div>
           <div className="ml-auto flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-[var(--good)] animate-pulse"></div>
+            <div className="w-2 h-2 rounded-full bg-[var(--good)] animate-pulse" />
             <span className="text-xs text-[var(--good)]">En línea</span>
           </div>
         </div>
 
-        {/* Mensajes */}
         <div className="h-96 overflow-y-auto p-4 space-y-3">
           {mensajes.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 flex items-center justify-center text-xs mr-2 flex-shrink-0 mt-0.5">
-                  🤖
+                <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
+                  <Bot size={13} strokeWidth={1.75} className="text-[var(--primary)]" />
                 </div>
               )}
               <div
@@ -410,29 +417,29 @@ const TabChat: React.FC = () => {
 
           {cargando && (
             <div className="flex justify-start">
-              <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 flex items-center justify-center text-xs mr-2 mt-0.5">
-                🤖
+              <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 flex items-center justify-center mr-2 mt-0.5">
+                <Bot size={13} strokeWidth={1.75} className="text-[var(--primary)]" />
               </div>
               <div className="bg-white/8 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3">
                 <div className="flex gap-1 items-center h-4">
-                  <div className="w-2 h-2 rounded-full bg-[var(--muted)] animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-[var(--muted)] animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-[var(--muted)] animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  {[0, 150, 300].map(d => (
+                    <div key={d} className="w-2 h-2 rounded-full bg-[var(--muted)] animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                  ))}
                 </div>
               </div>
             </div>
           )}
 
           {error && (
-            <div className="text-xs text-[var(--warn)] bg-yellow-900/20 border border-yellow-900/40 rounded-lg px-3 py-2 text-center">
-              ⚠️ {error}
+            <div className="text-xs text-[var(--warn)] bg-yellow-900/20 border border-yellow-900/40 rounded-lg px-3 py-2 flex items-center gap-2">
+              <AlertTriangle size={13} strokeWidth={1.75} className="flex-shrink-0" />
+              {error}
             </div>
           )}
 
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
         <div className="border-t border-[var(--line)] p-3 flex gap-2">
           <input
             type="text"
@@ -443,13 +450,8 @@ const TabChat: React.FC = () => {
             disabled={cargando}
             className="flex-1 bg-white/5 border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--primary)] transition-colors disabled:opacity-50"
           />
-          <Button
-            variant="primary"
-            onClick={enviar}
-            disabled={!input.trim() || cargando}
-            className="px-4"
-          >
-            Enviar
+          <Button variant="primary" onClick={enviar} disabled={!input.trim() || cargando} className="px-4">
+            <Send size={15} strokeWidth={1.75} />
           </Button>
         </div>
       </Card>
@@ -462,10 +464,8 @@ const TabChat: React.FC = () => {
 }
 
 // ─── Tab: Capacitación ────────────────────────────────────────────────────────
-const TabCapacitacion: React.FC<{ esBanco?: boolean; esCliente?: boolean }> = ({ esBanco, esCliente }) => {
-  const [seccion, setSeccion] = useState<'cliente' | 'banco' | 'faq'>(
-    esBanco ? 'banco' : 'cliente'
-  )
+const TabCapacitacion: React.FC<{ esBanco?: boolean; esCliente?: boolean }> = ({ esBanco }) => {
+  const [seccion, setSeccion] = useState<'cliente' | 'banco' | 'faq'>(esBanco ? 'banco' : 'cliente')
   const [guiaAbierta, setGuiaAbierta] = useState<number | null>(0)
   const [faqAbierto, setFaqAbierto] = useState<number | null>(null)
 
@@ -473,28 +473,40 @@ const TabCapacitacion: React.FC<{ esBanco?: boolean; esCliente?: boolean }> = ({
 
   return (
     <div className="space-y-4">
-      {/* Sub-tabs */}
-      <div className="flex gap-2">
-        {[
-          { id: 'cliente', label: '👔 Para Clientes' },
-          { id: 'banco',   label: '🏦 Para Bancos' },
-          { id: 'faq',     label: '❓ Preguntas Frecuentes' },
-        ].map(s => (
-          <button
-            key={s.id}
-            onClick={() => { setSeccion(s.id as any); setGuiaAbierta(0); setFaqAbierto(null) }}
-            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              seccion === s.id
-                ? 'bg-[var(--primary)] text-white'
-                : 'bg-white/10 text-[var(--muted)] hover:text-white'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-2">
+          {[
+            { id: 'cliente', label: 'Para Clientes' },
+            { id: 'banco',   label: 'Para Bancos'   },
+            { id: 'faq',     label: 'Preguntas Frecuentes' },
+          ].map(s => (
+            <button
+              key={s.id}
+              onClick={() => { setSeccion(s.id as any); setGuiaAbierta(0); setFaqAbierto(null) }}
+              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                seccion === s.id
+                  ? 'bg-[var(--primary)] text-white'
+                  : 'bg-white/10 text-[var(--muted)] hover:text-white'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            const subject = encodeURIComponent('[FundLink AI] Solicitud de Capacitación')
+            const body = encodeURIComponent('Hola,\n\nMe gustaría solicitar una sesión de capacitación para mi equipo sobre el uso de FundLink AI.\n\nPor favor contáctenme para coordinar.\n\nGracias.')
+            window.open(`mailto:soporte@fundlink.gt?subject=${subject}&body=${body}`)
+          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)]/80 text-white text-sm font-semibold transition-colors"
+        >
+          <GraduationCap size={15} strokeWidth={1.75} />
+          Solicitar Capacitación
+        </button>
       </div>
 
-      {/* Guías paso a paso */}
       {seccion !== 'faq' && (
         <div className="space-y-3">
           <p className="text-sm text-[var(--muted)]">
@@ -516,7 +528,10 @@ const TabCapacitacion: React.FC<{ esBanco?: boolean; esCliente?: boolean }> = ({
                     </span>
                     <span className="font-semibold text-sm">{guia.titulo}</span>
                   </div>
-                  <span className="text-[var(--muted)] text-sm">{isOpen ? '▲' : '▼'}</span>
+                  {isOpen
+                    ? <ChevronUp size={15} strokeWidth={2} className="text-[var(--muted)]" />
+                    : <ChevronDown size={15} strokeWidth={2} className="text-[var(--muted)]" />
+                  }
                 </button>
 
                 {isOpen && (
@@ -539,21 +554,6 @@ const TabCapacitacion: React.FC<{ esBanco?: boolean; esCliente?: boolean }> = ({
         </div>
       )}
 
-      {/* Botón solicitar capacitación */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => {
-            const subject = encodeURIComponent('[FundLink AI] Solicitud de Capacitación')
-            const body = encodeURIComponent('Hola,\n\nMe gustaría solicitar una sesión de capacitación para mi equipo sobre el uso de FundLink AI.\n\nPor favor contáctenme para coordinar.\n\nGracias.')
-            window.open(`mailto:soporte@fundlink.gt?subject=${subject}&body=${body}`)
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)]/80 text-white text-sm font-semibold transition-colors"
-        >
-          🎓 Solicitar Capacitación
-        </button>
-      </div>
-
-      {/* FAQ */}
       {seccion === 'faq' && (
         <div className="space-y-3">
           <p className="text-sm text-[var(--muted)]">Respuestas a las dudas más comunes sobre FundLink AI.</p>
@@ -566,7 +566,10 @@ const TabCapacitacion: React.FC<{ esBanco?: boolean; esCliente?: boolean }> = ({
                   onClick={() => setFaqAbierto(isOpen ? null : idx)}
                 >
                   <span className="text-sm font-semibold pr-4">{item.p}</span>
-                  <span className="text-[var(--muted)] text-sm flex-shrink-0">{isOpen ? '▲' : '▼'}</span>
+                  {isOpen
+                    ? <ChevronUp size={15} strokeWidth={2} className="text-[var(--muted)] flex-shrink-0" />
+                    : <ChevronDown size={15} strokeWidth={2} className="text-[var(--muted)] flex-shrink-0" />
+                  }
                 </button>
                 {isOpen && (
                   <div className="border-t border-[var(--line)] px-5 py-4">
@@ -605,25 +608,21 @@ const TabContacto: React.FC = () => {
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      {/* Info de contacto */}
       <div className="space-y-4">
         <Card>
           <h3 className="font-bold mb-4">Información de Soporte</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">✉️</span>
+              <Mail size={20} strokeWidth={1.75} className="text-[var(--muted)] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-xs text-[var(--muted)] mb-0.5">Correo de soporte</div>
-                <a
-                  href={`mailto:${EMAIL_SOPORTE}`}
-                  className="font-semibold text-[var(--link)] hover:underline"
-                >
+                <a href={`mailto:${EMAIL_SOPORTE}`} className="font-semibold text-[var(--link)] hover:underline">
                   {EMAIL_SOPORTE}
                 </a>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="text-2xl">⏰</span>
+              <Clock size={20} strokeWidth={1.75} className="text-[var(--muted)] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-xs text-[var(--muted)] mb-0.5">Horario de atención</div>
                 <div className="text-sm font-semibold">Lunes a Viernes</div>
@@ -631,7 +630,7 @@ const TabContacto: React.FC = () => {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="text-2xl">⚡</span>
+              <Zap size={20} strokeWidth={1.75} className="text-[var(--muted)] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-xs text-[var(--muted)] mb-0.5">Tiempo de respuesta</div>
                 <div className="text-sm font-semibold">Normal: 24 h hábiles</div>
@@ -648,12 +647,11 @@ const TabContacto: React.FC = () => {
         </Card>
       </div>
 
-      {/* Formulario */}
       <Card>
         <h3 className="font-bold mb-4">Enviar Consulta</h3>
         {enviado && (
           <div className="mb-4 p-3 rounded-lg bg-green-900/20 border border-green-900/50 text-green-300 text-sm">
-            ✓ Se abrió tu cliente de correo. Si no se abrió, escríbenos directamente a {EMAIL_SOPORTE}
+            Correo abierto. Si no se abrió, escríbenos directamente a {EMAIL_SOPORTE}
           </div>
         )}
         <div className="space-y-4">
@@ -672,7 +670,7 @@ const TabContacto: React.FC = () => {
                       : 'bg-white/5 border-[var(--line)] text-[var(--muted)] hover:text-white'
                   }`}
                 >
-                  {p === 'urgente' ? '🔴 Urgente' : '🟢 Normal'}
+                  {p === 'urgente' ? 'Urgente' : 'Normal'}
                 </button>
               ))}
             </div>
@@ -700,13 +698,8 @@ const TabContacto: React.FC = () => {
             />
           </div>
 
-          <Button
-            variant="primary"
-            className="w-full"
-            onClick={handleEnviar}
-            disabled={!asunto.trim() || !mensaje.trim()}
-          >
-            ✉️ Abrir en Correo
+          <Button variant="primary" className="w-full flex items-center justify-center gap-2" onClick={handleEnviar} disabled={!asunto.trim() || !mensaje.trim()}>
+            <Mail size={15} strokeWidth={1.75} /> Abrir en Correo
           </Button>
           <p className="text-xs text-[var(--muted)] text-center">
             Se abrirá tu cliente de correo con los datos pre-llenados.

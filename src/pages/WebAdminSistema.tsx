@@ -193,7 +193,7 @@ export const WebAdminSistema: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-2">
-                    {o.aprobada_por_admin ? '✓' : '—'}
+                    {o.aprobada_por_admin ? 'Sí' : '—'}
                   </td>
                   <td className="p-2 text-xs">{formatDateTime(o.created_at)}</td>
                 </tr>

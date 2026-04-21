@@ -1,4 +1,5 @@
 import React from 'react'
+import { CheckCircle2, ClipboardList, ExternalLink, Lightbulb } from 'lucide-react'
 import { Button } from './Button'
 
 interface CredencialesModalProps {
@@ -27,13 +28,14 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-[var(--card)] border border-[var(--line)] rounded-lg max-w-md w-full p-6">
-        <h3 className="text-xl font-bold mb-4 text-green-400">
-          ✅ Usuario creado en la base de datos
+        <h3 className="text-xl font-bold mb-4 text-green-400 flex items-center gap-2">
+          <CheckCircle2 size={20} strokeWidth={1.75} /> Usuario creado en la base de datos
         </h3>
 
         <div className="mb-6 p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg">
-          <p className="text-sm text-blue-200 mb-3">
-            <strong>📋 PASO ADICIONAL REQUERIDO:</strong>
+          <p className="text-sm text-blue-200 mb-3 flex items-center gap-2">
+            <ClipboardList size={14} strokeWidth={1.75} className="flex-shrink-0" />
+            <strong>PASO ADICIONAL REQUERIDO:</strong>
           </p>
           <p className="text-sm text-blue-200 mb-3">
             Debes crear la cuenta de autenticación manualmente en Supabase.
@@ -52,7 +54,7 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
             onClick={handleOpenSupabase}
             className="w-full mb-3"
           >
-            🔗 Abrir Supabase Auth
+            <ExternalLink size={14} strokeWidth={1.75} /> Abrir Supabase Auth
           </Button>
         </div>
 
@@ -82,14 +84,14 @@ export const CredencialesModal: React.FC<CredencialesModalProps> = ({
             onClick={handleCopyCredentials}
             className="w-full mt-3"
           >
-            📋 Copiar credenciales
+            <ClipboardList size={14} strokeWidth={1.75} className="inline mr-1" /> Copiar credenciales
           </Button>
         </div>
 
         {role.startsWith('cliente') && (
           <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-900/50 rounded-lg">
             <p className="text-sm text-yellow-200">
-              💡 El cliente deberá completar su configuración al hacer login por primera vez.
+              <Lightbulb size={14} strokeWidth={1.75} className="inline mr-1.5" /> El cliente deberá completar su configuración al hacer login por primera vez.
             </p>
           </div>
         )}

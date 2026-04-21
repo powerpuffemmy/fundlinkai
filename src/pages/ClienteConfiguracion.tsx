@@ -529,12 +529,9 @@ export const ClienteConfiguracion: React.FC = () => {
                 className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-lg">
-                    {doc.tipo_documento === 'cedula' ? '🪪' :
-                     doc.tipo_documento === 'rtu' ? '📋' :
-                     doc.tipo_documento === 'patente' ? '📜' :
-                     doc.tipo_documento === 'estados_financieros' ? '📊' : '📄'}
-                  </span>
+                  <div className="w-7 h-7 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--muted)]"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate">
                       {TIPOS_DOCUMENTO.find(t => t.value === doc.tipo_documento)?.label || doc.tipo_documento}

@@ -316,7 +316,7 @@ export const WebAdminCompromisos: React.FC = () => {
                           variant="small"
                           onClick={() => generarPDFCompromiso(c)}
                         >
-                          📄 Ver
+                          Ver PDF
                         </Button>
                       </td>
                     </tr>

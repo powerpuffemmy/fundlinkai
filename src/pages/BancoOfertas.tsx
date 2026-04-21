@@ -108,9 +108,9 @@ export const BancoOfertas: React.FC = () => {
                     </td>
                     <td className="p-3 text-sm">
                       {oferta.aprobada_por_admin ? (
-                        <span className="text-[var(--good)]">✓ Sí</span>
+                        <span className="text-[var(--good)]">Aprobada</span>
                       ) : (
-                        <span className="text-[var(--warn)]">⏳ Pendiente</span>
+                        <span className="text-[var(--warn)]">Pendiente</span>
                       )}
                     </td>
                   </tr>

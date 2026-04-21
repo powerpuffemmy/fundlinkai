@@ -170,7 +170,7 @@ export const WebAdminUsuarios: React.FC = () => {
 
   const handleEliminar = async (usuario: User) => {
     const confirmar = window.confirm(
-      `⚠️ ADVERTENCIA: ¿Seguro que deseas ELIMINAR permanentemente a ${usuario.nombre}?\n\nEsta acción NO se puede deshacer.`
+      `ADVERTENCIA: ¿Seguro que deseas ELIMINAR permanentemente a ${usuario.nombre}?\n\nEsta acción NO se puede deshacer.`
     )
     if (!confirmar) return
 
@@ -215,7 +215,7 @@ export const WebAdminUsuarios: React.FC = () => {
         p_metadata: { user_id: usuario.id, ai_pro: nuevoEstado }
       })
 
-      toastSuccess(nuevoEstado ? 'Banco marcado como AI Pro ⭐' : 'Banco cambiado a Regular')
+      toastSuccess(nuevoEstado ? 'Banco marcado como AI Pro' : 'Banco cambiado a Regular')
       await cargarUsuarios()
     } catch (error: any) {
       console.error('Error:', error)
@@ -349,7 +349,7 @@ export const WebAdminUsuarios: React.FC = () => {
                             : 'bg-gray-900/20 border-gray-700 text-gray-400 hover:bg-gray-800/30'
                         }`}
                       >
-                        {usuario.ai_pro ? '⭐ AI Pro' : 'Regular'}
+                        {usuario.ai_pro ? 'AI Pro' : 'Regular'}
                       </button>
                     ) : (
                       <span className="text-xs text-[var(--muted)]">N/A</span>

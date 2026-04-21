@@ -152,7 +152,7 @@ export const BancoCompromisos: React.FC = () => {
                             onClick={() => handleEjecutar(comp)}
                             disabled={ejecutando === comp.id}
                           >
-                            {ejecutando === comp.id ? 'Ejecutando...' : '✓ Ejecutar'}
+                            {ejecutando === comp.id ? 'Ejecutando...' : 'Ejecutar'}
                           </Button>
                         )}
                         {/* PDF Contrato */}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Skeleton, CardSkeleton, TableSkeleton } from '@/components/common/Skeleton'
@@ -138,7 +139,7 @@ export const ClienteCompromisos: React.FC = () => {
       {compromisosProximosVencer.length > 0 && (
         <Card className="bg-red-900/10 border-red-900/50">
           <div className="flex items-start gap-3">
-            <div className="text-3xl">⚠️</div>
+            <AlertTriangle size={24} strokeWidth={1.75} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-bold text-lg mb-2 text-red-400">
                 Compromisos Próximos a Vencer

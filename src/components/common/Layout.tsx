@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from './Button'
 
@@ -26,10 +27,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, sidebar }) => {
             {sidebar && (
               <button
                 onClick={() => setCollapsed(c => !c)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-white hover:bg-white/10 transition-colors text-lg"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-white hover:bg-white/10 transition-colors"
                 title={collapsed ? 'Abrir menú' : 'Colapsar menú'}
               >
-                {collapsed ? '☰' : '✕'}
+                {collapsed ? <Menu size={18} strokeWidth={1.75} /> : <X size={18} strokeWidth={1.75} />}
               </button>
             )}
             <h1 className="text-xl font-black tracking-tight text-white">
