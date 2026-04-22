@@ -60,22 +60,22 @@ const baseStyle = `
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; color: #1a1a2e; margin: 0; padding: 0; }
   .wrapper { background: #f4f6f9; padding: 32px 16px; }
   .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-  .header { background: linear-gradient(135deg, #1e3a8a 0%, #6366f1 100%); padding: 32px; text-align: center; }
+  .header { background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 100%); padding: 32px; text-align: center; }
   .logo-text { font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: -1px; }
-  .logo-ai { color: #60a5fa; }
+  .logo-ai { color: #7dd3fc; }
   .badge { display: inline-block; padding: 6px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-top: 12px; }
   .body { padding: 36px 32px; }
-  h2 { margin: 0 0 8px; font-size: 22px; color: #1e3a8a; }
+  h2 { margin: 0 0 8px; font-size: 22px; color: #0c4a6e; }
   p { margin: 0 0 16px; line-height: 1.7; color: #374151; }
-  .card { background: #f0f4ff; border-left: 4px solid #6366f1; border-radius: 8px; padding: 20px 24px; margin: 24px 0; }
+  .card { background: #f0f9ff; border-left: 4px solid #38bdf8; border-radius: 8px; padding: 20px 24px; margin: 24px 0; }
   .card-warn { background: #fff7ed; border-left-color: #f59e0b; }
   .card-success { background: #f0fdf4; border-left-color: #22c55e; }
   .card-danger { background: #fef2f2; border-left-color: #ef4444; }
   .card p { margin: 6px 0; font-size: 15px; }
   .card .label { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .card .value { font-size: 18px; font-weight: 700; color: #1e3a8a; }
+  .card .value { font-size: 18px; font-weight: 700; color: #0c4a6e; }
   .big-number { font-size: 56px; font-weight: 900; text-align: center; padding: 16px 0; }
-  .btn { display: inline-block; background: #6366f1; color: #ffffff !important; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px; margin-top: 8px; }
+  .btn { display: inline-block; background: #0284c7; color: #ffffff !important; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px; margin-top: 8px; }
   .footer { background: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb; }
   .footer p { font-size: 12px; color: #9ca3af; margin: 4px 0; }
 `
@@ -111,7 +111,7 @@ const plantillas: Record<TipoNotificacion, (d: Record<string, unknown>) => { sub
 
   nueva_oferta: (d) => ({
     subject: `💰 Nueva oferta recibida — ${d.monto} ${d.moneda} al ${d.tasa}%`,
-    html: layout('NUEVA OFERTA', '#6366f1', `
+    html: layout('NUEVA OFERTA', '#0284c7', `
       <h2>¡Recibiste una nueva oferta!</h2>
       <p>Hola <strong>${d.cliente_nombre}</strong>, un banco ha enviado una propuesta en tu subasta:</p>
       <div class="card">
@@ -176,7 +176,7 @@ const plantillas: Record<TipoNotificacion, (d: Record<string, unknown>) => { sub
 
   oferta_colocacion_recibida: (d) => ({
     subject: `💼 Nueva oferta de colocación — ${d.tasa}% · ${d.monto} ${d.moneda}`,
-    html: layout('OFERTA DE COLOCACIÓN', '#8b5cf6', `
+    html: layout('OFERTA DE COLOCACIÓN', '#0284c7', `
       <h2>Recibiste una oferta de colocación</h2>
       <p>Hola <strong>${d.cliente_nombre}</strong>, un banco ha respondido a tu solicitud de colocación directa:</p>
       <div class="card">
@@ -240,7 +240,7 @@ const plantillas: Record<TipoNotificacion, (d: Record<string, unknown>) => { sub
 
   compromiso_creado: (d) => ({   // legacy alias
     subject: `📋 Compromiso registrado — ${d.op_id}`,
-    html: layout('COMPROMISO CONFIRMADO', '#6366f1', `
+    html: layout('COMPROMISO CONFIRMADO', '#0284c7', `
       <h2>Compromiso registrado</h2>
       <p>Se ha generado un nuevo compromiso financiero en la plataforma:</p>
       <div class="card">
@@ -257,7 +257,7 @@ const plantillas: Record<TipoNotificacion, (d: Record<string, unknown>) => { sub
 
   compromiso_confirmado: (d) => ({
     subject: `📋 Nuevo compromiso confirmado — ${d.op_id} · ${d.monto} ${d.moneda}`,
-    html: layout('COMPROMISO CONFIRMADO', '#6366f1', `
+    html: layout('COMPROMISO CONFIRMADO', '#0284c7', `
       <h2>Compromiso confirmado</h2>
       <p>Hola <strong>${d.destinatario_nombre}</strong>, se ha confirmado el siguiente compromiso financiero:</p>
       <div class="card">
@@ -343,7 +343,7 @@ const plantillas: Record<TipoNotificacion, (d: Record<string, unknown>) => { sub
 
   cuenta_aprobada: (d) => ({
     subject: `🎉 ¡Bienvenido a FundLinkAI! Tu cuenta está activa`,
-    html: layout('CUENTA APROBADA', '#6366f1', `
+    html: layout('CUENTA APROBADA', '#0284c7', `
       <h2>¡Bienvenido a FundLinkAI!</h2>
       <p>Hola <strong>${d.cliente_nombre}</strong>, tu cuenta ha sido aprobada y ya puedes comenzar a operar.</p>
       <div class="card">
