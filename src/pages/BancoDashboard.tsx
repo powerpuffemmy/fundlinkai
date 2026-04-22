@@ -75,7 +75,7 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
       enviada: 'bg-blue-900/20 text-blue-200',
       aprobada: 'bg-green-900/20 text-green-200',
       rechazada: 'bg-red-900/20 text-red-200',
-      adjudicada: 'bg-purple-900/20 text-purple-200',
+      adjudicada: 'bg-sky-900/20 text-sky-200',
       vigente: 'bg-green-900/20 text-green-200',
       vencido: 'bg-red-900/20 text-red-200'
     }
@@ -135,7 +135,7 @@ export const BancoDashboard: React.FC<BancoDashboardProps> = ({ onNavigate }) =>
         </Card>
         <Card>
           <div className="text-sm text-[var(--muted)]">Ofertas Enviadas</div>
-          <div className="text-2xl font-black mt-1 text-purple-400">
+          <div className="text-2xl font-black mt-1 text-sky-400">
             {ofertasEnviadas}
           </div>
           <div className="text-xs text-green-400 mt-1">

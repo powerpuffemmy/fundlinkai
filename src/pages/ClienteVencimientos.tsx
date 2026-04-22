@@ -12,6 +12,15 @@ import type { Moneda, Compromiso } from '@/types/database'
 
 const GTQ_PER_USD = 7.7
 
+const InfoTooltip = ({ text }: { text: string }) => (
+  <div className="relative inline-block group ml-1.5 align-middle">
+    <span className="text-[var(--muted)] cursor-help text-xs select-none">ⓘ</span>
+    <div className="pointer-events-none absolute left-0 bottom-full mb-2 w-64 text-xs bg-[#1c1c1c] border border-[var(--line)] rounded-lg px-3 py-2 text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-xl">
+      {text}
+    </div>
+  </div>
+)
+
 type VistaType = 'semanal' | 'mensual'
 
 interface CompromisoConBanco extends Compromiso {
@@ -382,10 +391,7 @@ export const ClienteVencimientos: React.FC = () => {
 
       {/* ── Gráfica 1: Portafolio total + vencimientos mensuales 12 meses ── */}
       <Card>
-        <h3 className="font-bold mb-1">Vencimientos Mensuales — 12 Meses</h3>
-        <p className="text-xs text-[var(--muted)] mb-4">
-          Primera columna: total del portafolio vigente. Columnas siguientes: monto que vence cada mes.
-        </p>
+        <h3 className="font-bold mb-4">Vencimientos Mensuales — 12 Meses<InfoTooltip text="Primera columna: total del portafolio vigente. Columnas siguientes: monto que vence cada mes." /></h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={datosGrafica1} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barCategoryGap="20%">
             <XAxis
@@ -406,7 +412,7 @@ export const ClienteVencimientos: React.FC = () => {
               {datosGrafica1.map((entry, idx) => (
                 <Cell
                   key={idx}
-                  fill={entry.isFirst ? '#6366f1' : entry.total > 0 ? '#22c55e' : '#374151'}
+                  fill={entry.isFirst ? '#38bdf8' : entry.total > 0 ? '#22c55e' : '#374151'}
                   fillOpacity={entry.total > 0 ? 0.85 : 0.3}
                 />
               ))}
@@ -414,17 +420,14 @@ export const ClienteVencimientos: React.FC = () => {
           </BarChart>
         </ResponsiveContainer>
         <div className="flex gap-4 mt-2 text-xs text-[var(--muted)]">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} />Total Portafolio</div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#38bdf8' }} />Total Portafolio</div>
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#22c55e' }} />Vencimiento mensual</div>
         </div>
       </Card>
 
       {/* ── Gráfica 2: Total mes actual + vencimientos por semana ── */}
       <Card>
-        <h3 className="font-bold mb-1">Vencimientos por Semana — Mes Actual</h3>
-        <p className="text-xs text-[var(--muted)] mb-4">
-          Primera columna: total que vence en el mes en curso. Columnas siguientes: desglose semanal.
-        </p>
+        <h3 className="font-bold mb-4">Vencimientos por Semana — Mes Actual<InfoTooltip text="Primera columna: total que vence en el mes en curso. Columnas siguientes: desglose semanal." /></h3>
         {datosGrafica2.every(d => d.total === 0) ? (
           <p className="text-[var(--muted)] text-sm text-center py-8">
             No hay vencimientos en el mes actual.
@@ -583,7 +586,7 @@ export const ClienteVencimientos: React.FC = () => {
                                   <span>{getIconoVencimiento(venc.estado)}</span>
                                   <span className="font-semibold">{comp.contraparte}</span>
                                   {comp.es_externo && (
-                                    <span className="text-[10px] px-1 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                                    <span className="text-[10px] px-1 py-0.5 rounded bg-sky-900/20 text-sky-300 border border-sky-900/30">
                                       Ext
                                     </span>
                                   )}

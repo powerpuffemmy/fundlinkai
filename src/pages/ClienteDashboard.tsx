@@ -14,6 +14,15 @@ import type { Moneda } from '@/types/database'
 
 const GTQ_PER_USD = 7.7
 
+const InfoTooltip = ({ text }: { text: string }) => (
+  <div className="relative inline-block group ml-1.5 align-middle">
+    <span className="text-[var(--muted)] cursor-help text-xs select-none">ⓘ</span>
+    <div className="pointer-events-none absolute left-0 bottom-full mb-2 w-64 text-xs bg-[#1c1c1c] border border-[var(--line)] rounded-lg px-3 py-2 text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-xl">
+      {text}
+    </div>
+  </div>
+)
+
 interface CompromisoRow {
   id: string
   op_id: string
@@ -348,7 +357,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
             <div className="text-xs text-[var(--muted)] mt-0.5">Ofertas en Subastas</div>
           </div>
           <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
-            <div className="text-2xl font-black text-purple-400">{resumen.ofertasColocacion}</div>
+            <div className="text-2xl font-black text-sky-400">{resumen.ofertasColocacion}</div>
             <div className="text-xs text-[var(--muted)] mt-0.5">Ofertas de Colocación</div>
           </div>
           <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
@@ -399,7 +408,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
             <h3 className="font-bold text-lg">Subastas Activas</h3>
             <button
               onClick={() => onNavigate('subastas')}
-              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+              className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
             >
               Ver todas →
             </button>
@@ -446,7 +455,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
             <h3 className="font-bold text-lg">Ofertas de Bancos</h3>
             <button
               onClick={() => onNavigate('subastas')}
-              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+              className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
             >
               Ver subastas →
             </button>
@@ -459,7 +468,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
                 const estadoStyles: Record<string, string> = {
                   enviada: 'bg-blue-900/20 text-blue-300',
                   aprobada: 'bg-green-900/20 text-green-300',
-                  adjudicada: 'bg-purple-900/20 text-purple-300',
+                  adjudicada: 'bg-sky-900/20 text-sky-300',
                   rechazada: 'bg-red-900/20 text-red-300',
                 }
                 const banco = Array.isArray(oferta.banco) ? oferta.banco[0] : oferta.banco
@@ -492,7 +501,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           <h3 className="font-bold">Solicitudes de Colocación</h3>
           <button
             onClick={() => onNavigate('solicitudes')}
-            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+            className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
           >
             Ver todas →
           </button>
@@ -571,10 +580,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
 
       {/* ── GRÁFICA 1: Portafolio + vencimientos mensuales ─────────────── */}
       <Card>
-        <h3 className="font-bold mb-1">Vencimientos Mensuales — 12 Meses</h3>
-        <p className="text-xs text-[var(--muted)] mb-4">
-          Primera columna: total del portafolio. Columnas siguientes: monto que vence cada mes.
-        </p>
+        <h3 className="font-bold mb-4">Vencimientos Mensuales — 12 Meses<InfoTooltip text="Primera columna: total del portafolio. Columnas siguientes: monto que vence cada mes." /></h3>
         <ResponsiveContainer width="100%" height={210}>
           <BarChart data={datosGrafica1} margin={{ top: 4, right: 8, left: 0, bottom: 4 }} barCategoryGap="20%">
             <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -582,23 +588,20 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
             <Tooltip content={<TooltipMonto />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
             <Bar dataKey="total" radius={[4,4,0,0]}>
               {datosGrafica1.map((e, i) => (
-                <Cell key={i} fill={e.isFirst ? '#6366f1' : e.total > 0 ? '#22c55e' : '#374151'} fillOpacity={e.total > 0 ? 0.85 : 0.3} />
+                <Cell key={i} fill={e.isFirst ? '#38bdf8' : e.total > 0 ? '#22c55e' : '#374151'} fillOpacity={e.total > 0 ? 0.85 : 0.3} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
         <div className="flex gap-4 mt-2 text-xs text-[var(--muted)]">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} />Total Portafolio</div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#38bdf8' }} />Total Portafolio</div>
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#22c55e' }} />Vencimiento mensual</div>
         </div>
       </Card>
 
       {/* ── GRÁFICA 2: Total mes + semanas ──────────────────────────────── */}
       <Card>
-        <h3 className="font-bold mb-1">Vencimientos por Semana — Mes Actual</h3>
-        <p className="text-xs text-[var(--muted)] mb-4">
-          Primera columna: total del mes en curso. Columnas siguientes: desglose semanal.
-        </p>
+        <h3 className="font-bold mb-4">Vencimientos por Semana — Mes Actual<InfoTooltip text="Primera columna: total del mes en curso. Columnas siguientes: desglose semanal." /></h3>
         {datosGrafica2.every(d => d.total === 0) ? (
           <p className="text-[var(--muted)] text-sm text-center py-8">No hay vencimientos en el mes actual.</p>
         ) : (

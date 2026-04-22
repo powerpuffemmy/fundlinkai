@@ -11,7 +11,7 @@ export const BancoOfertas: React.FC = () => {
       enviada: 'bg-blue-900/20 border-blue-900/50 text-blue-200',
       aprobada: 'bg-green-900/20 border-green-900/50 text-green-200',
       rechazada: 'bg-red-900/20 border-red-900/50 text-red-200',
-      adjudicada: 'bg-purple-900/20 border-purple-900/50 text-purple-200'
+      adjudicada: 'bg-sky-900/20 border-sky-900/50 text-sky-200'
     }
     return badges[estado] || 'bg-gray-900/20 border-gray-900/50 text-gray-200'
   }
@@ -55,7 +55,7 @@ export const BancoOfertas: React.FC = () => {
         </Card>
         <Card>
           <div className="text-sm text-[var(--muted)]">Adjudicadas</div>
-          <div className="text-2xl font-black mt-1 text-purple-400">
+          <div className="text-2xl font-black mt-1 text-sky-400">
             {ofertas.filter(o => o.estado === 'adjudicada').length}
           </div>
         </Card>

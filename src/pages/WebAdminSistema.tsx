@@ -187,7 +187,7 @@ export const WebAdminSistema: React.FC = () => {
                       o.estado === 'enviada' ? 'bg-blue-900/20 text-blue-200' :
                       o.estado === 'aprobada' ? 'bg-green-900/20 text-green-200' :
                       o.estado === 'rechazada' ? 'bg-red-900/20 text-red-200' :
-                      'bg-purple-900/20 text-purple-200'
+                      'bg-sky-900/20 text-sky-200'
                     }`}>
                       {o.estado}
                     </span>

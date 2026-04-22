@@ -188,7 +188,7 @@ function WebAdminSidebar({ current, go }: { current: Page; go: (p: Page) => void
   return (
     <nav className="py-4 flex flex-col gap-0.5">
       <div className="px-4 pb-3">
-        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
+        <span className="text-xs px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
           Web Admin
         </span>
       </div>

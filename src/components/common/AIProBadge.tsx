@@ -20,7 +20,7 @@ export const AIProBadge: React.FC<AIProBadgeProps> = ({
 
   return (
     <span 
-      className={`inline-flex items-center gap-1 rounded border bg-purple-900/20 border-purple-500/50 text-purple-200 font-semibold ${sizeClasses[size]}`}
+      className={`inline-flex items-center gap-1 rounded border bg-sky-900/20 border-sky-500/50 text-sky-200 font-semibold ${sizeClasses[size]}`}
       title="Banco con acceso a funcionalidades AI Pro"
     >
       ⭐ {showLabel && 'AI Pro'}

@@ -208,7 +208,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
             <h3 className="font-bold mb-4">Parámetros de la Solicitud</h3>
 
             <form onSubmit={handleSiguiente} className="space-y-4">
-              <div className="p-3 rounded border text-xs bg-purple-900/10 border-purple-900/30 text-purple-300">
+              <div className="p-3 rounded border text-xs bg-sky-900/10 border-sky-900/30 text-sky-300">
                 El banco recibirá tu solicitud y responderá con una <strong>tasa cierre</strong> y el monto que puede colocar.
               </div>
 
@@ -354,7 +354,7 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-[var(--muted)]">Tipo:</span>
-                <span className="font-semibold px-2 py-0.5 rounded text-xs bg-purple-900/20 text-purple-300">
+                <span className="font-semibold px-2 py-0.5 rounded text-xs bg-sky-900/20 text-sky-300">
                   Colocación Directa
                 </span>
               </div>
@@ -396,8 +396,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
               </div>
             </div>
 
-            <div className="mt-6 p-3 bg-purple-900/20 border border-purple-900/50 rounded">
-              <p className="text-xs text-purple-200">
+            <div className="mt-6 p-3 bg-sky-900/20 border border-sky-900/50 rounded">
+              <p className="text-xs text-sky-200">
                 <strong>Flujo:</strong> El banco recibe tu solicitud → propone tasa cierre y monto → tú aceptas o rechazas la oferta.
               </p>
             </div>
@@ -417,11 +417,11 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
         </p>
       </div>
 
-      <Card className="bg-purple-900/10 border-purple-900/50">
+      <Card className="bg-sky-900/10 border-sky-900/50">
         <div className="grid md:grid-cols-5 gap-4 text-sm">
           <div>
             <div className="text-[var(--muted)]">Moneda</div>
-            <div className="font-bold text-lg text-purple-300">{datosTemp?.moneda}</div>
+            <div className="font-bold text-lg text-sky-300">{datosTemp?.moneda}</div>
           </div>
           <div>
             <div className="text-[var(--muted)]">Monto Máx.</div>
@@ -479,8 +479,8 @@ export const NuevaSolicitudColocacion: React.FC<NuevaSolicitudColocacionProps> =
                 onClick={() => handleToggleBanco(banco.banco_id)}
                 className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                   sel
-                    ? 'bg-purple-900/20 border-purple-900/50'
-                    : 'bg-white/5 border-gray-900/50 hover:border-purple-900/40'
+                    ? 'bg-sky-900/20 border-sky-900/50'
+                    : 'bg-white/5 border-gray-900/50 hover:border-sky-900/40'
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">

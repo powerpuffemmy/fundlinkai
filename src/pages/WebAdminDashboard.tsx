@@ -163,7 +163,7 @@ export const WebAdminDashboard: React.FC = () => {
           </Card>
           <Card>
             <div className="text-sm text-[var(--muted)]">Bancos</div>
-            <div className="text-2xl font-black mt-1 text-purple-400">{stats.totalBancos}</div>
+            <div className="text-2xl font-black mt-1 text-sky-400">{stats.totalBancos}</div>
           </Card>
           <Card>
             <div className="text-sm text-[var(--muted)]">Inactivos</div>
@@ -233,7 +233,7 @@ export const WebAdminDashboard: React.FC = () => {
           </Card>
           <Card>
             <div className="text-sm text-[var(--muted)]">Tasa Conv. Col.</div>
-            <div className="text-2xl font-black mt-1 text-purple-400">
+            <div className="text-2xl font-black mt-1 text-sky-400">
               {stats.solColocacionTotal > 0
                 ? (((stats.solColocacionTotal - stats.solColocacionAbiertas) / stats.solColocacionTotal) * 100).toFixed(0)
                 : 0}%
@@ -319,9 +319,9 @@ export const WebAdminDashboard: React.FC = () => {
                   : 0}%
               </span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-purple-900/20 rounded-lg">
+            <div className="flex justify-between items-center p-3 bg-sky-900/20 rounded-lg">
               <span className="text-sm">Ofertas por Subasta</span>
-              <span className="font-bold text-purple-400">
+              <span className="font-bold text-sky-400">
                 {stats.totalSubastas > 0 
                   ? (stats.totalOfertas / stats.totalSubastas).toFixed(1)
                   : 0}

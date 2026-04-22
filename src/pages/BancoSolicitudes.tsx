@@ -20,7 +20,7 @@ const tipoBadge = (tipo: string) => {
     multi: 'Multi-tramo',
   }
   return (
-    <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-900/30 text-purple-200 border border-purple-900/50">
+    <span className="px-2 py-0.5 rounded text-xs font-bold bg-sky-900/30 text-sky-200 border border-sky-900/50">
       SUBASTA {(labels[tipo] || tipo).toUpperCase()}
     </span>
   )
@@ -211,9 +211,9 @@ export const BancoSolicitudes: React.FC = () => {
               </span>
             </div>
             {user?.ai_pro && subasta.tasa_objetivo && (
-              <div className="flex justify-between items-center mt-3 p-2 bg-purple-900/20 border border-purple-500/30 rounded">
-                <span className="text-purple-200 text-xs">Tasa Objetivo:</span>
-                <span className="font-bold text-purple-200">{subasta.tasa_objetivo}%</span>
+              <div className="flex justify-between items-center mt-3 p-2 bg-sky-900/20 border border-sky-500/30 rounded">
+                <span className="text-sky-200 text-xs">Tasa Objetivo:</span>
+                <span className="font-bold text-sky-200">{subasta.tasa_objetivo}%</span>
               </div>
             )}
           </div>

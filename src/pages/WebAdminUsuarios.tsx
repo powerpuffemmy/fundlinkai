@@ -345,7 +345,7 @@ export const WebAdminUsuarios: React.FC = () => {
                         onClick={() => handleToggleAIPro(usuario)}
                         className={`text-xs px-2 py-1 rounded border transition-colors ${
                           usuario.ai_pro
-                            ? 'bg-purple-900/20 border-purple-500/50 text-purple-200'
+                            ? 'bg-sky-900/20 border-sky-500/50 text-sky-200'
                             : 'bg-gray-900/20 border-gray-700 text-gray-400 hover:bg-gray-800/30'
                         }`}
                       >

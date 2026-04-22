@@ -291,7 +291,7 @@ export const WebAdminCompromisos: React.FC = () => {
                         {c.es_externo ? (
                           <div>
                             <div className="font-semibold">{c.contraparte_nombre}</div>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-900/20 text-sky-300 border border-sky-900/30">
                               Externo
                             </span>
                           </div>
@@ -366,7 +366,7 @@ export const WebAdminCompromisos: React.FC = () => {
                     <div className="font-semibold">
                       {banco}
                       {data.esExterno && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-sky-900/20 text-sky-300 border border-sky-900/30">
                           Externo
                         </span>
                       )}

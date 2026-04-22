@@ -178,7 +178,7 @@ export const ClienteCompromisos: React.FC = () => {
                       <div className="font-semibold text-sm">
                         {comp.es_externo ? comp.contraparte_nombre : comp.banco_entidad}
                         {comp.es_externo && (
-                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-sky-900/20 text-sky-300 border border-sky-900/30">
                             Externo
                           </span>
                         )}
@@ -265,7 +265,7 @@ export const ClienteCompromisos: React.FC = () => {
                         {comp.es_externo ? (
                           <div>
                             <div className="font-semibold text-sm">{comp.contraparte_nombre}</div>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/20 text-purple-300 border border-purple-900/30">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-900/20 text-sky-300 border border-sky-900/30">
                               Externo
                             </span>
                           </div>
