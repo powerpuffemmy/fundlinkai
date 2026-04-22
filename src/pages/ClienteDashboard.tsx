@@ -83,7 +83,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         const { data: subConOfertas } = await supabase
           .from('subastas')
           .select(`
-            id, op_id, tipo, monto, moneda, plazo, estado, expires_at, tasa_objetivo,
+            id, tipo, monto, moneda, plazo, estado, expires_at, tasa_objetivo,
             ofertas(id, tasa, estado, created_at, banco:users!banco_id(nombre, entidad))
           `)
           .order('created_at', { ascending: false })
@@ -97,7 +97,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         const ofertasFlat: any[] = []
         for (const sub of todasSubastas) {
           for (const oferta of (sub.ofertas || [])) {
-            ofertasFlat.push({ ...oferta, subastas: { op_id: sub.op_id, monto: sub.monto, moneda: sub.moneda } })
+            ofertasFlat.push({ ...oferta, subastas: { id: sub.id, monto: sub.monto, moneda: sub.moneda } })
           }
         }
         ofertasFlat.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -163,7 +163,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           compromisosNuevos: compHoy.length,
           detalleOfertas: [
             ...ofertasSubHoy.map((o: any) => ({
-              op_id: o.subastas?.op_id || '—',
+              op_id: '—',
               tasa: o.tasa,
               monto: o.subastas?.monto ?? 0,
               moneda: o.subastas?.moneda || 'GTQ',
@@ -418,7 +418,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
                         <span className="text-xs px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-900/40 mr-2">
                           {formatTipoSubasta(sub.tipo)}
                         </span>
-                        <span className="font-mono text-xs text-[var(--muted)]">{sub.op_id}</span>
+                        <span className="font-mono text-xs text-[var(--muted)]">{sub.id.slice(0, 8).toUpperCase()}</span>
                       </div>
                       {horasRestantes !== null && (
                         <span className={`text-xs font-semibold ${horasRestantes <= 2 ? 'text-red-400' : horasRestantes <= 12 ? 'text-yellow-400' : 'text-[var(--muted)]'}`}>
@@ -469,7 +469,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
                     <div>
                       <div className="text-sm font-semibold">{banco?.entidad || '—'}</div>
                       <div className="text-xs text-[var(--muted)]">
-                        {subasta?.op_id} · {subasta?.monto ? formatMoney(subasta.monto, subasta.moneda) : '—'}
+                        {subasta?.monto ? formatMoney(subasta.monto, subasta.moneda) : '—'}
                       </div>
                     </div>
                     <div className="text-right">
