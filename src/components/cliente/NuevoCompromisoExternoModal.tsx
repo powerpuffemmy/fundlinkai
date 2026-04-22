@@ -3,7 +3,7 @@ import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
 import { useCompromisos } from '@/hooks/useCompromisos'
-import { useClienteBancoLimites } from '@/hooks/useClienteBancoLimites'
+import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import type { Moneda } from '@/types/database'
 
@@ -19,16 +19,15 @@ export const NuevoCompromisoExternoModal: React.FC<NuevoCompromisoExternoModalPr
   onSuccess,
 }) => {
   const { crearCompromisoExterno, subirDocumentoCompromiso } = useCompromisos()
-  const { obtenerTodosBancos } = useClienteBancoLimites()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [bancosOptions, setBancosOptions] = useState<{ value: string; label: string }[]>([])
 
   useEffect(() => {
-    obtenerTodosBancos().then((bancos: any[]) => {
-      const opts = (bancos || []).map((b: any) => ({
-        value: b.banco_entidad || b.banco_nombre,
-        label: b.banco_entidad || b.banco_nombre
+    supabase.rpc('obtener_bancos_activos').then(({ data }) => {
+      const opts = (data || []).map((b: any) => ({
+        value: b.banco_nombre,
+        label: b.banco_nombre,
       }))
       setBancosOptions([{ value: '', label: '— Selecciona un banco —' }, ...opts])
     })

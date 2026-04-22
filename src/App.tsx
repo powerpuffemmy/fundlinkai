@@ -226,9 +226,16 @@ function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('verify') || params.get('verify-sol') || params.get('verify-oferta')) {
+    const hasVerify = params.get('verify') || params.get('verify-sol') || params.get('verify-oferta')
+    if (hasVerify) {
+      // Guardar antes de limpiar URL para que sobreviva el flujo de login
+      sessionStorage.setItem('pendingVerify', hasVerify)
       window.history.replaceState({}, '', window.location.pathname)
-      if (user) setCurrentPage('compromisos')
+    }
+    const pending = sessionStorage.getItem('pendingVerify')
+    if (pending && user) {
+      sessionStorage.removeItem('pendingVerify')
+      setCurrentPage('compromisos')
     }
   }, [user])
 

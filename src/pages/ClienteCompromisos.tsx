@@ -28,12 +28,13 @@ type FiltroTipo = 'todos' | 'fundlink' | 'externos'
 
 export const ClienteCompromisos: React.FC = () => {
   const { user } = useAuthStore()
-  const { eliminarCompromisoExterno } = useCompromisos()
+  const { eliminarCompromisoExterno, ejecutarCompromiso } = useCompromisos()
   const { confirm, ConfirmDialog } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [compromisos, setCompromisos] = useState<CompromisoConBanco[]>([])
   const [showNuevoExterno, setShowNuevoExterno] = useState(false)
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
+  const [ejecutando, setEjecutando] = useState<string | null>(null)
 
   const cargarCompromisos = async () => {
     if (!user) return
@@ -67,6 +68,26 @@ export const ClienteCompromisos: React.FC = () => {
     .map(c => ({ ...c, vencimiento: calcularVencimiento(c.fecha_vencimiento) }))
     .filter(c => c.vencimiento.diasRestantes <= 15 && c.vencimiento.diasRestantes >= 0)
     .sort((a, b) => a.vencimiento.diasRestantes - b.vencimiento.diasRestantes)
+
+  const handleEjecutar = (comp: CompromisoConBanco) => {
+    confirm({
+      title: 'Confirmar Ejecución',
+      message: `¿Confirmas que realizaste el desembolso del compromiso ${comp.op_id}?`,
+      confirmText: 'Sí, ejecutar',
+      onConfirm: async () => {
+        try {
+          setEjecutando(comp.id)
+          await ejecutarCompromiso(comp.id)
+          toast.success(`Compromiso ${comp.op_id} marcado como EJECUTADO`)
+          cargarCompromisos()
+        } catch (err: any) {
+          toast.error(err?.message || 'Error al ejecutar el compromiso')
+        } finally {
+          setEjecutando(null)
+        }
+      }
+    })
+  }
 
   const handleEliminarExterno = (id: string) => {
     confirm({
@@ -313,6 +334,16 @@ export const ClienteCompromisos: React.FC = () => {
                             </>
                           ) : (
                             <>
+                              {comp.estado === 'confirmado' && user?.role === 'cliente_admin' && (
+                                <Button
+                                  variant="primary"
+                                  className="text-xs"
+                                  onClick={() => handleEjecutar(comp)}
+                                  disabled={ejecutando === comp.id}
+                                >
+                                  {ejecutando === comp.id ? 'Ejecutando...' : 'Ejecutar'}
+                                </Button>
+                              )}
                               <Button
                                 variant="small"
                                 onClick={() => generarPDFContrato({

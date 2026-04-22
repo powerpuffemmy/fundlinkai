@@ -22,8 +22,7 @@ const estadoBadge = (estado: string) => {
 
 export const BancoCompromisos: React.FC = () => {
   const { user } = useAuthStore()
-  const { compromisos, loading, ejecutarCompromiso } = useCompromisos()
-  const [ejecutando, setEjecutando] = useState<string | null>(null)
+  const { compromisos, loading } = useCompromisos()
   const [generandoPDF, setGenerandoPDF] = useState<string | null>(null)
 
   const misCompromisos = compromisos.filter(c => c.banco_id === user?.id)
@@ -57,19 +56,6 @@ export const BancoCompromisos: React.FC = () => {
     setGenerandoPDF(comp.id + '-ejecutado')
     await generarPDFEjecutado(mapParaPDF(comp))
     setGenerandoPDF(null)
-  }
-
-  const handleEjecutar = async (comp: any) => {
-    if (!confirm(`¿Confirmas que el cliente realizó el desembolso del compromiso ${comp.op_id}?`)) return
-    try {
-      setEjecutando(comp.id)
-      await ejecutarCompromiso(comp.id)
-      toastSuccess(`Compromiso ${comp.op_id} marcado como EJECUTADO`)
-    } catch {
-      toastError('Error al ejecutar el compromiso')
-    } finally {
-      setEjecutando(null)
-    }
   }
 
   const activos = misCompromisos.filter(c => ['confirmado', 'ejecutado', 'vigente'].includes(c.estado))
@@ -106,9 +92,7 @@ export const BancoCompromisos: React.FC = () => {
               {lista.map(comp => {
                 const dias = getDiasRestantes(comp.fecha_vencimiento)
                 const alertClass = getAlertClass(dias)
-                const isConfirmado = comp.estado === 'confirmado'
                 const isEjecutado = comp.estado === 'ejecutado'
-                const esAuditor = user?.role === 'banco_auditor'
 
                 return (
                   <tr key={comp.id} className="border-b border-[var(--line)] hover:bg-white/5">
@@ -144,18 +128,6 @@ export const BancoCompromisos: React.FC = () => {
                     <td className="p-3">{estadoBadge(comp.estado)}</td>
                     <td className="p-3">
                       <div className="flex flex-col gap-1.5 min-w-[120px]">
-                        {/* Botón Ejecutar — solo banco no auditor, solo si confirmado */}
-                        {isConfirmado && !esAuditor && (
-                          <Button
-                            variant="primary"
-                            className="text-xs"
-                            onClick={() => handleEjecutar(comp)}
-                            disabled={ejecutando === comp.id}
-                          >
-                            {ejecutando === comp.id ? 'Ejecutando...' : 'Ejecutar'}
-                          </Button>
-                        )}
-                        {/* PDF Contrato */}
                         <Button
                           variant="small"
                           className="text-xs"
@@ -164,7 +136,6 @@ export const BancoCompromisos: React.FC = () => {
                         >
                           {generandoPDF === comp.id + '-contrato' ? '...' : 'PDF Contrato'}
                         </Button>
-                        {/* PDF Ejecutado — solo si ya ejecutado */}
                         {isEjecutado && (
                           <Button
                             variant="small"
