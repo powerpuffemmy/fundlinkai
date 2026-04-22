@@ -120,7 +120,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         if (solIds.length > 0) {
           const { data } = await supabase
             .from('ofertas_colocacion')
-            .select('id, solicitud_id, tasa, monto')
+            .select('id, solicitud_id, tasa, monto, banco:users!banco_id(nombre, entidad)')
             .in('solicitud_id', solIds)
             .eq('aprobada_por_admin', true)
             .gte('created_at', hoyStr)
@@ -163,7 +163,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           compromisosNuevos: compHoy.length,
           detalleOfertas: [
             ...ofertasSubHoy.map((o: any) => ({
-              op_id: '—',
+              op_id: o.banco?.entidad || o.banco?.nombre || '—',
               tasa: o.tasa,
               monto: o.subastas?.monto ?? 0,
               moneda: o.subastas?.moneda || 'GTQ',
@@ -172,7 +172,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
             ...ofertasColHoy.map((o: any) => {
               const sol = (solicitudes || []).find((s: any) => s.id === o.solicitud_id)
               return {
-                op_id: '—',
+                op_id: o.banco?.entidad || o.banco?.nombre || '—',
                 tasa: o.tasa,
                 monto: o.monto ?? 0,
                 moneda: sol?.moneda || 'GTQ',
