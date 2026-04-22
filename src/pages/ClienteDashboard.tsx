@@ -79,45 +79,33 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         hoyISO.setHours(0, 0, 0, 0)
         const hoyStr = hoyISO.toISOString()
 
-        // Subastas del cliente
-        const { data: subastas } = await supabase
+        // Subastas + ofertas en una sola query desde subastas (evita RLS de tabla ofertas)
+        const { data: subConOfertas } = await supabase
           .from('subastas')
-          .select('id, op_id')
+          .select(`
+            id, op_id, tipo, monto, moneda, plazo, estado, expires_at, tasa_objetivo,
+            ofertas(id, tasa, estado, monto, moneda, created_at, banco:users!banco_id(nombre, entidad))
+          `)
           .eq('cliente_id', user.id)
-
-        const subIds = (subastas || []).map((s: any) => s.id)
-
-        // Subastas abiertas con detalle completo para el panel
-        const { data: subAbiertas } = await supabase
-          .from('subastas')
-          .select('id, op_id, tipo, monto, moneda, plazo, estado, expires_at, tasa_objetivo')
-          .eq('cliente_id', user.id)
-          .eq('estado', 'abierta')
           .order('created_at', { ascending: false })
-          .limit(5)
-        setSubastasActivas(subAbiertas || [])
 
-        // Últimas ofertas de bancos en las subastas del cliente
-        if (subIds.length > 0) {
-          const { data: ofBanco } = await supabase
-            .from('ofertas')
-            .select('id, tasa, estado, created_at, subasta_id, banco:users!banco_id(nombre, entidad), subastas!subasta_id(op_id, monto, moneda)')
-            .in('subasta_id', subIds)
-            .order('created_at', { ascending: false })
-            .limit(6)
-          setOfertasBanco(ofBanco || [])
+        const todasSubastas = (subConOfertas || []) as any[]
+
+        // Subastas abiertas para el panel
+        setSubastasActivas(todasSubastas.filter((s: any) => s.estado === 'abierta').slice(0, 5))
+
+        // Aplanar y ordenar ofertas de todas las subastas
+        const ofertasFlat: any[] = []
+        for (const sub of todasSubastas) {
+          for (const oferta of (sub.ofertas || [])) {
+            ofertasFlat.push({ ...oferta, subastas: { op_id: sub.op_id, monto: sub.monto, moneda: sub.moneda } })
+          }
         }
+        ofertasFlat.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        setOfertasBanco(ofertasFlat.slice(0, 6))
 
         // Ofertas de hoy en subastas
-        let ofertasSubHoy: any[] = []
-        if (subIds.length > 0) {
-          const { data } = await supabase
-            .from('ofertas')
-            .select('id, tasa, monto, moneda, subasta_id, subastas(op_id)')
-            .in('subasta_id', subIds)
-            .gte('created_at', hoyStr)
-          ofertasSubHoy = data || []
-        }
+        const ofertasSubHoy = ofertasFlat.filter((o: any) => o.created_at >= hoyStr)
 
         // Solicitudes de colocación del cliente
         const { data: solicitudes } = await supabase

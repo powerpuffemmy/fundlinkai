@@ -14,9 +14,9 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'px-3 py-2 rounded-lg font-semibold transition-all duration-200'
   
   const variants = {
-    primary: 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white hover:opacity-90',
-    secondary: 'bg-[#0f172a] border border-[var(--line)] text-[var(--text)] hover:bg-[#1e293b]',
-    small: 'bg-[#0f172a] border border-[var(--line)] text-[var(--text)] text-xs px-2.5 py-1.5 hover:bg-[#1e293b]'
+    primary: 'bg-[var(--primary)] text-white hover:bg-[var(--accent)]',
+    secondary: 'bg-[#1c1c1c] border border-[var(--line)] text-[var(--text)] hover:bg-[#252525]',
+    small: 'bg-[#1c1c1c] border border-[var(--line)] text-[var(--text)] text-xs px-2.5 py-1.5 hover:bg-[#252525]'
   }
 
   return (
