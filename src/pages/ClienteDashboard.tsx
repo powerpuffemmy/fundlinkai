@@ -79,14 +79,13 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         hoyISO.setHours(0, 0, 0, 0)
         const hoyStr = hoyISO.toISOString()
 
-        // Subastas + ofertas en una sola query desde subastas (evita RLS de tabla ofertas)
+        // Subastas + ofertas — sin filtro por user.id (RLS entity-based cubre toda la entidad)
         const { data: subConOfertas } = await supabase
           .from('subastas')
           .select(`
             id, op_id, tipo, monto, moneda, plazo, estado, expires_at, tasa_objetivo,
             ofertas(id, tasa, estado, monto, moneda, created_at, banco:users!banco_id(nombre, entidad))
           `)
-          .eq('cliente_id', user.id)
           .order('created_at', { ascending: false })
 
         const todasSubastas = (subConOfertas || []) as any[]
