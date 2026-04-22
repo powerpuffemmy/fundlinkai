@@ -84,7 +84,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           .from('subastas')
           .select(`
             id, op_id, tipo, monto, moneda, plazo, estado, expires_at, tasa_objetivo,
-            ofertas(id, tasa, estado, monto, moneda, created_at, banco:users!banco_id(nombre, entidad))
+            ofertas(id, tasa, estado, created_at, banco:users!banco_id(nombre, entidad))
           `)
           .order('created_at', { ascending: false })
 
@@ -120,7 +120,7 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
         if (solIds.length > 0) {
           const { data } = await supabase
             .from('ofertas_colocacion')
-            .select('id, tasa, monto, moneda')
+            .select('id, solicitud_id, tasa, monto')
             .in('solicitud_id', solIds)
             .eq('aprobada_por_admin', true)
             .gte('created_at', hoyStr)
@@ -163,19 +163,22 @@ export const ClienteDashboard: React.FC<Props> = ({ onNavigate }) => {
           compromisosNuevos: compHoy.length,
           detalleOfertas: [
             ...ofertasSubHoy.map((o: any) => ({
-              op_id: (o.subastas as any)?.op_id || '—',
+              op_id: o.subastas?.op_id || '—',
               tasa: o.tasa,
-              monto: o.monto,
-              moneda: o.moneda,
+              monto: o.subastas?.monto ?? 0,
+              moneda: o.subastas?.moneda || 'GTQ',
               tipo: 'Subasta'
             })),
-            ...ofertasColHoy.map((o: any) => ({
-              op_id: '—',
-              tasa: o.tasa,
-              monto: o.monto,
-              moneda: o.moneda,
-              tipo: 'Colocación'
-            }))
+            ...ofertasColHoy.map((o: any) => {
+              const sol = (solicitudes || []).find((s: any) => s.id === o.solicitud_id)
+              return {
+                op_id: '—',
+                tasa: o.tasa,
+                monto: o.monto ?? 0,
+                moneda: sol?.moneda || 'GTQ',
+                tipo: 'Colocación'
+              }
+            })
           ],
           detalleCompromisos: compHoy.map(c => ({
             op_id: c.op_id,
