@@ -134,18 +134,11 @@ export const useCompromisos = () => {
       if (!user) throw new Error('Usuario no autenticado')
 
       const { data: updated, error } = await supabase
-        .from('compromisos')
-        .update({
-          estado: 'ejecutado',
-          fecha_ejecucion: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select('id, estado')
+        .rpc('ejecutar_compromiso', { p_compromiso_id: id })
 
       if (error) throw error
       if (!updated || updated.length === 0) {
-        throw new Error('No se pudo ejecutar el compromiso. Verifica los permisos en la base de datos.')
+        throw new Error('No se pudo ejecutar el compromiso. Verifica que el estado sea "confirmado" y que el banco sea el correcto.')
       }
 
       await supabase.rpc('log_auditoria', {
