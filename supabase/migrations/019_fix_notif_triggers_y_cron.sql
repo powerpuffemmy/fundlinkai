@@ -84,12 +84,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Reemplaza <SUPABASE_URL> y <ANON_KEY> con los valores reales antes de ejecutar
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Eliminar job anterior si existe
-SELECT cron.unschedule('fundlink-alertas-vencimiento') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'fundlink-alertas-vencimiento'
-);
-
--- Crear job (reemplazar los placeholders):
+-- Crear job (reemplazar los placeholders)
+-- NOTA: Habilitar pg_cron primero desde Dashboard → Database → Extensions
+-- Luego ejecutar este bloque por separado:
 -- SELECT cron.schedule(
 --   'fundlink-alertas-vencimiento',
 --   '0 14 * * *',
