@@ -21,8 +21,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const FROM_EMAIL = 'FundLink <notificaciones@fundlink.app>'
-const APP_URL    = 'https://app.fundlink.app'
+const FROM_EMAIL = 'FundLink <notificaciones@fundlinkai.com>'
+const APP_URL    = 'https://app.fundlinkai.com'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 type TipoNotificacion =
