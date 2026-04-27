@@ -55,13 +55,10 @@ CREATE OR REPLACE FUNCTION notify_via_edge_function(
 RETURNS void AS $$
 DECLARE
   v_url      TEXT := 'https://ewcvkvnnixrxmiruzmie.supabase.co/functions/v1/enviar-email';
-  v_anon_key TEXT := current_setting('app.settings.supabase_anon_key', true);
+  -- La anon key es pública (está en el frontend). ALTER DATABASE no funciona en el SQL Editor
+  -- así que se hardcodea aquí. Reemplazar con la anon key real del proyecto.
+  v_anon_key TEXT := '<ANON_KEY>';
 BEGIN
-  IF v_anon_key IS NULL OR v_anon_key = '' THEN
-    RAISE WARNING '[notify_via_edge_function] supabase_anon_key no configurada — email no enviado para tipo=%', p_tipo;
-    RETURN;
-  END IF;
-
   PERFORM net.http_post(
     url     := v_url,
     headers := jsonb_build_object(
