@@ -245,8 +245,8 @@ export const ClienteCompromisos: React.FC = () => {
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Contraparte</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Monto</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Tasa</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Inicio</th>
-                  <th className="text-left p-3 text-sm text-[var(--muted)]">Ejecución</th>
+                  <th className="text-left p-3 text-sm text-[var(--muted)]">Creada el</th>
+                  <th className="text-left p-3 text-sm text-[var(--muted)]">Ejecutada el</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Vencimiento</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Días Rest.</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Estado</th>
@@ -325,8 +325,8 @@ export const ClienteCompromisos: React.FC = () => {
                           {comp.es_externo ? (
                             <>
                               {comp.documento_url && (
-                                <a href={comp.documento_url} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="small">Doc</Button>
+                                <a href={comp.documento_url} target="_blank" rel="noopener noreferrer" className="w-full">
+                                  <Button variant="small" className="w-full">Ver Documentos</Button>
                                 </a>
                               )}
                               {user?.role === 'cliente_admin' && (
