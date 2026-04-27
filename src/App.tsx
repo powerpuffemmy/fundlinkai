@@ -37,8 +37,8 @@ import { WebAdminAprobaciones } from './pages/WebAdminAprobaciones'
 import { HelpDesk } from './pages/HelpDesk'
 import type { User } from './types/database'
 
-type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'solicitudes' | 'nueva-solicitud' | 'help'
-type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion' | 'colocaciones' | 'help'
+type ClientePage = 'dashboard' | 'nueva-subasta' | 'subastas' | 'historial' | 'compromisos' | 'vencimientos' | 'configuracion' | 'solicitudes' | 'nueva-solicitud' | 'historial-solicitudes' | 'help'
+type BancoPage = 'dashboard' | 'solicitudes' | 'ofertas' | 'aprobaciones' | 'compromisos' | 'clientes' | 'configuracion' | 'colocaciones' | 'colocaciones-historial' | 'help'
 type WebAdminPage = 'dashboard' | 'usuarios' | 'compromisos' | 'sistema' | 'auditoria' | 'aprobaciones' | 'help'
 type Page = ClientePage | BancoPage | WebAdminPage
 
@@ -123,8 +123,11 @@ function ClienteSidebar({ current, go, goNuevaSolicitud, user }: {
       <NavItem icon={Home} label="Dashboard" active={current === 'dashboard'} onClick={() => go('dashboard')} />
 
       <NavDivider label="Colocaciones" />
-      <NavItem icon={Plus} label="Nueva Solicitud" active={current === 'nueva-solicitud'} onClick={goNuevaSolicitud} />
-      <NavItem icon={ClipboardList} label="Mis Solicitudes" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
+      <NavGroup icon={ClipboardList} label="Colocaciones">
+        <NavItem indent icon={Plus} label="Nueva Solicitud" active={current === 'nueva-solicitud'} onClick={goNuevaSolicitud} />
+        <NavItem indent icon={LayoutList} label="Mis Solicitudes" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
+        <NavItem indent icon={History} label="Historial" active={current === 'historial-solicitudes'} onClick={() => go('historial-solicitudes')} />
+      </NavGroup>
 
       <NavDivider label="Subastas" />
       <NavGroup icon={Building2} label="Subastas">
@@ -164,7 +167,10 @@ function BancoSidebar({ current, go, user }: {
         <NavItem indent icon={ClipboardList} label="Subastas Activas" active={current === 'solicitudes'} onClick={() => go('solicitudes')} />
         <NavItem indent icon={Send} label="Mis Ofertas" active={current === 'ofertas'} onClick={() => go('ofertas')} />
       </NavGroup>
-      <NavItem icon={Landmark} label="Colocaciones" active={current === 'colocaciones'} onClick={() => go('colocaciones')} />
+      <NavGroup icon={Landmark} label="Colocaciones">
+        <NavItem indent icon={ClipboardList} label="Solicitudes" active={current === 'colocaciones'} onClick={() => go('colocaciones')} />
+        <NavItem indent icon={History} label="Historial" active={current === 'colocaciones-historial'} onClick={() => go('colocaciones-historial')} />
+      </NavGroup>
 
       {isAdmin && (
         <>
@@ -307,8 +313,9 @@ function App() {
         case 'historial':       return <HistorialSubastas />
         case 'compromisos':     return <ClienteCompromisos />
         case 'vencimientos':    return <ClienteVencimientos />
-        case 'solicitudes':     return <ClienteSolicitudesColocacion />
-        case 'nueva-solicitud': return <NuevaSolicitudColocacion key={nuevaSolicitudKey} onCreada={() => go('solicitudes')} />
+        case 'solicitudes':            return <ClienteSolicitudesColocacion />
+        case 'historial-solicitudes':  return <ClienteSolicitudesColocacion historial />
+        case 'nueva-solicitud':        return <NuevaSolicitudColocacion key={nuevaSolicitudKey} onCreada={() => go('solicitudes')} />
         case 'configuracion':   return <ClienteConfiguracion />
         case 'help':            return <HelpDesk />
         default:                return <ClienteDashboard onNavigate={(page) => go(page as Page)} />
@@ -321,7 +328,8 @@ function App() {
         case 'aprobaciones':  return <BancoAprobaciones />
         case 'compromisos':   return <BancoCompromisos />
         case 'clientes':      return <BancoClientes />
-        case 'colocaciones':  return <BancoColocaciones />
+        case 'colocaciones':          return <BancoColocaciones />
+        case 'colocaciones-historial': return <BancoColocaciones historial />
         case 'configuracion': return <BancoConfiguracion />
         case 'help':          return <HelpDesk />
         default:              return <BancoDashboard onNavigate={go} />

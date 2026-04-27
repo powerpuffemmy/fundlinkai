@@ -246,6 +246,7 @@ export const ClienteCompromisos: React.FC = () => {
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Monto</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Tasa</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Inicio</th>
+                  <th className="text-left p-3 text-sm text-[var(--muted)]">Ejecución</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Vencimiento</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Días Rest.</th>
                   <th className="text-left p-3 text-sm text-[var(--muted)]">Estado</th>
@@ -283,6 +284,11 @@ export const ClienteCompromisos: React.FC = () => {
                         {comp.tasa}%
                       </td>
                       <td className="p-3 text-sm">{formatDate(comp.fecha_inicio)}</td>
+                      <td className="p-3 text-sm">
+                        {(comp as any).fecha_ejecucion
+                          ? <span className="text-green-300 font-semibold">{formatDate((comp as any).fecha_ejecucion)}</span>
+                          : <span className="text-[var(--muted)]">—</span>}
+                      </td>
                       <td className="p-3 text-sm">{formatDate(comp.fecha_vencimiento)}</td>
                       <td className="p-3">
                         <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold border ${vencimientoInfo.color} ${getColorBgVencimiento(vencimientoInfo.estado)}`}>

@@ -288,6 +288,10 @@ export const BancoSolicitudes: React.FC = () => {
                 <span className="font-semibold">{subasta.plazo} días</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-[var(--muted)]">Creada:</span>
+                <span className="font-semibold text-xs">{formatDateTime(subasta.created_at)}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-[var(--muted)]">Tiempo restante:</span>
                 <span className="font-semibold text-[var(--warn)]">
                   {getTiempoRestante(subasta.expires_at)}

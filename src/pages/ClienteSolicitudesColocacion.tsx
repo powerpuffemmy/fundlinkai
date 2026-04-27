@@ -11,6 +11,7 @@ import type { SolicitudColocacion, OfertaColocacion } from '@/types/database'
 
 interface ClienteSolicitudesColocacionProps {
   onNueva?: () => void
+  historial?: boolean
 }
 
 const estadoBadge = (estado: string) => {
@@ -45,7 +46,7 @@ const ofertaBadge = (estado: string) => {
   )
 }
 
-export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacionProps> = ({ onNueva }) => {
+export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacionProps> = ({ onNueva, historial = false }) => {
   const { user } = useAuthStore()
   const { solicitudes, loading, cerrarSolicitud, aceptarOferta, rechazarOferta } = useSolicitudesColocacion()
   const [expandido, setExpandido] = useState<string | null>(null)
@@ -103,350 +104,199 @@ export const ClienteSolicitudesColocacion: React.FC<ClienteSolicitudesColocacion
     )
   }
 
+  const solicitudesFiltradas = historial
+    ? (solicitudes as any[]).filter(s => s.estado !== 'abierta')
+    : (solicitudes as any[]).filter(s => s.estado === 'abierta')
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Mis Solicitudes de Colocación</h2>
+        <h2 className="text-2xl font-bold">
+          {historial ? 'Historial de Solicitudes' : 'Mis Solicitudes de Colocación'}
+        </h2>
         <p className="text-[var(--muted)] mt-1">
-          Gestiona tus solicitudes y las ofertas recibidas de los bancos
+          {historial
+            ? 'Solicitudes cerradas y canceladas'
+            : 'Gestiona tus solicitudes abiertas y las ofertas recibidas de los bancos'}
         </p>
       </div>
 
-      {solicitudes.length === 0 ? (
+      {solicitudesFiltradas.length === 0 ? (
         <Card>
           <div className="text-center py-12 text-[var(--muted)]">
             <div className="flex justify-center mb-3 text-[var(--muted)]/40"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>
-            <p className="font-semibold mb-1">Sin solicitudes aún</p>
-            <p className="text-sm">Usa <strong>Nueva Solicitud</strong> en el menú para enviar una solicitud a los bancos.</p>
+            <p className="font-semibold mb-1">{historial ? 'Sin historial' : 'Sin solicitudes aún'}</p>
+            <p className="text-sm">{historial ? 'No hay solicitudes cerradas o canceladas.' : <><strong>Nueva Solicitud</strong> en el menú para enviar una solicitud a los bancos.</>}</p>
           </div>
         </Card>
       ) : (
-        <>
-          {/* ── Solicitudes Abiertas ── */}
-          {(() => {
-            const abiertas = (solicitudes as any[]).filter(s => s.estado === 'abierta')
+        <div className="space-y-4">
+          {solicitudesFiltradas.map((sol) => {
+            const abierta = sol.estado === 'abierta'
+            const ofertasPendientes = (sol.ofertas || []).filter((o: OfertaColocacion) => o.estado === 'enviada')
+            const isExpanded = expandido === sol.id
             return (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-green-300">
-                  Abiertas ({abiertas.length})
-                </h3>
-                {abiertas.length === 0 ? (
-                  <Card>
-                    <p className="text-sm text-[var(--muted)] text-center py-4">No hay solicitudes abiertas.</p>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {abiertas.map((sol) => {
-                      const abierta = true
-                      const ofertasPendientes = (sol.ofertas || []).filter((o: OfertaColocacion) => o.estado === 'enviada')
-                      const isExpanded = expandido === sol.id
-                      return (
-                        <Card key={sol.id}>
-                          <div
-                            className="flex items-start justify-between cursor-pointer"
-                            onClick={() => setExpandido(isExpanded ? null : sol.id)}
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 flex-wrap">
-                                {estadoBadge(sol.estado)}
-                                <span className="font-semibold text-lg">
-                                  {sol.monto ? `Máx. ${formatMoney(sol.monto, sol.moneda)}` : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
-                                </span>
-                                {sol.tasa_objetivo && (
-                                  <span className="text-sm font-semibold text-[var(--good)]">
-                                    {sol.tasa_objetivo}%
-                                    {sol.tipo_tasa && (
-                                      <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
-                                        {sol.tipo_tasa === 'firme' || sol.tipo_tasa === 'cierre' ? 'TASA EN FIRME / CIERRE' : sol.tipo_tasa === 'indicativa' ? 'TASA INDICATIVA / OBJETIVO' : sol.tipo_tasa}
-                                      </span>
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex gap-4 mt-1 text-sm text-[var(--muted)]">
-                                <span>Cierre: {new Date(sol.fecha_cierre).toLocaleDateString('es-GT')}</span>
-                                <span className={ofertasPendientes.length > 0 ? 'text-blue-300 font-semibold' : ''}>
-                                  {(sol.ofertas || []).length} oferta(s)
-                                  {ofertasPendientes.length > 0 && ` · ${ofertasPendientes.length} pendiente(s)`}
-                                </span>
-                              </div>
-                              <div className="text-xs text-[var(--muted)] mt-1">
-                                {new Date(sol.created_at).toLocaleString('es-GT')}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 ml-3">
-                              <Button
-                                variant="small"
-                                className="text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  generarPDFSolicitudColocacion({
-                                    id: sol.id,
-                                    cliente_nombre: user?.nombre,
-                                    cliente_entidad: user?.entidad,
-                                    moneda: sol.moneda,
-                                    monto: sol.monto,
-                                    plazo: sol.plazo,
-                                    tasa_objetivo: sol.tasa_objetivo,
-                                    tipo_tasa: sol.tipo_tasa,
-                                    fecha_cierre: sol.fecha_cierre,
-                                    notas: sol.notas,
-                                    created_at: sol.created_at,
-                                  })
-                                }}
-                              >
-                                PDF Sol.
-                              </Button>
-                              {abierta && (
-                                <Button
-                                  variant="small"
-                                  onClick={(e) => { e.stopPropagation(); setConfirmCerrar(sol.id) }}
-                                >
-                                  Cerrar
-                                </Button>
-                              )}
-                              <span className="text-[var(--muted)] text-sm">{isExpanded ? '▲' : '▼'}</span>
-                            </div>
-                          </div>
-                          {sol.notas && (
-                            <div className="mt-2 text-sm text-[var(--muted)] italic">"{sol.notas}"</div>
+              <Card key={sol.id} className={historial ? 'opacity-80' : ''}>
+                <div
+                  className="flex items-start justify-between cursor-pointer"
+                  onClick={() => setExpandido(isExpanded ? null : sol.id)}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {estadoBadge(sol.estado)}
+                      <span className="font-semibold text-lg">
+                        {sol.monto ? `Máx. ${formatMoney(sol.monto, sol.moneda)}` : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
+                      </span>
+                      {sol.tasa_objetivo && (
+                        <span className="text-sm font-semibold text-[var(--good)]">
+                          {sol.tasa_objetivo}%
+                          {sol.tipo_tasa && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
+                              {sol.tipo_tasa === 'firme' || sol.tipo_tasa === 'cierre' ? 'TASA EN FIRME / CIERRE' : sol.tipo_tasa === 'indicativa' ? 'TASA INDICATIVA / OBJETIVO' : sol.tipo_tasa}
+                            </span>
                           )}
-                          {isExpanded && (
-                            <div className="mt-4 border-t border-white/10 pt-4 space-y-3">
-                              <h4 className="font-semibold text-sm">Ofertas recibidas</h4>
-                              {(sol.ofertas || []).length === 0 ? (
-                                <p className="text-sm text-[var(--muted)]">Ningún banco ha enviado oferta aún.</p>
-                              ) : (
-                                (sol.ofertas || []).map((oferta: OfertaColocacion) => (
-                                  <div
-                                    key={oferta.id}
-                                    className={`p-3 rounded-lg border ${
-                                      oferta.estado === 'aceptada'
-                                        ? 'bg-green-900/10 border-green-900/40'
-                                        : oferta.estado === 'rechazada'
-                                        ? 'bg-red-900/10 border-red-900/30 opacity-60'
-                                        : 'bg-white/5 border-white/10'
-                                    }`}
-                                  >
-                                    <div className="flex justify-between items-start">
-                                      <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                          {ofertaBadge(oferta.estado)}
-                                          <span className="font-semibold text-sm">
-                                            {(oferta as any).banco?.nombre || 'Banco'}
-                                          </span>
-                                        </div>
-                                        <div className="flex gap-4 text-sm">
-                                          <span>Tasa: <strong className="text-[var(--good)]">{oferta.tasa}%</strong></span>
-                                          <span>Monto: <strong>{formatMoney(oferta.monto, sol.moneda)}</strong></span>
-                                        </div>
-                                        {oferta.notas && (
-                                          <p className="text-xs text-[var(--muted)] mt-1">"{oferta.notas}"</p>
-                                        )}
-                                        <div className="flex items-center gap-2 mt-1.5">
-                                          <span className="text-xs text-[var(--muted)]">
-                                            {new Date(oferta.created_at).toLocaleString('es-GT')}
-                                          </span>
-                                          <Button
-                                            variant="small"
-                                            className="text-xs py-0.5 px-2"
-                                            onClick={() => generarPDFOfertaColocacion({
-                                              id: oferta.id,
-                                              tasa: oferta.tasa,
-                                              monto: oferta.monto,
-                                              notas: oferta.notas,
-                                              created_at: oferta.created_at,
-                                              banco_nombre: (oferta as any).banco?.nombre,
-                                              banco_entidad: (oferta as any).banco?.entidad || (oferta as any).banco?.nombre,
-                                              cliente_nombre: user?.nombre,
-                                              cliente_entidad: user?.entidad,
-                                              solicitud_plazo: sol.plazo,
-                                              solicitud_moneda: sol.moneda,
-                                            })}
-                                          >
-                                            PDF Oferta
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      {oferta.estado === 'enviada' && abierta && (
-                                        <div className="flex gap-2 ml-3">
-                                          <Button
-                                            variant="primary"
-                                            className="text-xs py-1 px-3"
-                                            onClick={() => setConfirmAceptar(oferta)}
-                                            disabled={procesando}
-                                          >
-                                            Aceptar
-                                          </Button>
-                                          <Button
-                                            variant="secondary"
-                                            className="text-xs py-1 px-3"
-                                            onClick={() => setConfirmRechazar(oferta.id)}
-                                            disabled={procesando}
-                                          >
-                                            Rechazar
-                                          </Button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
-                        </Card>
-                      )
-                    })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-4 mt-1 text-sm text-[var(--muted)]">
+                      <span>Cierre: {new Date(sol.fecha_cierre).toLocaleDateString('es-GT')}</span>
+                      <span className={ofertasPendientes.length > 0 ? 'text-blue-300 font-semibold' : ''}>
+                        {(sol.ofertas || []).length} oferta(s)
+                        {ofertasPendientes.length > 0 && ` · ${ofertasPendientes.length} pendiente(s)`}
+                      </span>
+                    </div>
+                    <div className="text-xs text-[var(--muted)] mt-1">
+                      {new Date(sol.created_at).toLocaleString('es-GT')}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-3">
+                    <Button
+                      variant="small"
+                      className="text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        generarPDFSolicitudColocacion({
+                          id: sol.id,
+                          cliente_nombre: user?.nombre,
+                          cliente_entidad: user?.entidad,
+                          moneda: sol.moneda,
+                          monto: sol.monto,
+                          plazo: sol.plazo,
+                          tasa_objetivo: sol.tasa_objetivo,
+                          tipo_tasa: sol.tipo_tasa,
+                          fecha_cierre: sol.fecha_cierre,
+                          notas: sol.notas,
+                          created_at: sol.created_at,
+                        })
+                      }}
+                    >
+                      PDF Sol.
+                    </Button>
+                    {abierta && (
+                      <Button
+                        variant="small"
+                        onClick={(e) => { e.stopPropagation(); setConfirmCerrar(sol.id) }}
+                      >
+                        Cerrar
+                      </Button>
+                    )}
+                    <span className="text-[var(--muted)] text-sm">{isExpanded ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+                {sol.notas && (
+                  <div className="mt-2 px-3 py-2 rounded-md bg-amber-900/20 border border-amber-700/40 text-sm text-amber-200 font-medium">
+                    📝 {sol.notas}
                   </div>
                 )}
-              </div>
-            )
-          })()}
-
-          {/* ── Solicitudes Cerradas / Canceladas ── */}
-          {(() => {
-            const cerradas = (solicitudes as any[]).filter(s => s.estado !== 'abierta')
-            if (cerradas.length === 0) return null
-            return (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-3 text-gray-400">
-                  Cerradas ({cerradas.length})
-                </h3>
-                <div className="space-y-4">
-                  {cerradas.map((sol) => {
-                    const ofertasPendientes = (sol.ofertas || []).filter((o: OfertaColocacion) => o.estado === 'enviada')
-                    const isExpanded = expandido === sol.id
-                    return (
-                      <Card key={sol.id} className="opacity-75">
+                {isExpanded && (
+                  <div className="mt-4 border-t border-white/10 pt-4 space-y-3">
+                    <h4 className="font-semibold text-sm">Ofertas recibidas</h4>
+                    {(sol.ofertas || []).length === 0 ? (
+                      <p className="text-sm text-[var(--muted)]">Ningún banco ha enviado oferta aún.</p>
+                    ) : (
+                      (sol.ofertas || []).map((oferta: OfertaColocacion) => (
                         <div
-                          className="flex items-start justify-between cursor-pointer"
-                          onClick={() => setExpandido(isExpanded ? null : sol.id)}
+                          key={oferta.id}
+                          className={`p-3 rounded-lg border ${
+                            oferta.estado === 'aceptada'
+                              ? 'bg-green-900/10 border-green-900/40'
+                              : oferta.estado === 'rechazada'
+                              ? 'bg-red-900/10 border-red-900/30 opacity-60'
+                              : 'bg-white/5 border-white/10'
+                          }`}
                         >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              {estadoBadge(sol.estado)}
-                              <span className="font-semibold text-lg">
-                                {sol.monto ? `Máx. ${formatMoney(sol.monto, sol.moneda)}` : 'Monto libre'} · {sol.plazo} días · {sol.moneda}
-                              </span>
-                              {sol.tasa_objetivo && (
-                                <span className="text-sm font-semibold text-[var(--good)]">
-                                  {sol.tasa_objetivo}%
-                                  {sol.tipo_tasa && (
-                                    <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-white/10 text-white capitalize">
-                                      {sol.tipo_tasa === 'firme' || sol.tipo_tasa === 'cierre' ? 'TASA EN FIRME / CIERRE' : sol.tipo_tasa === 'indicativa' ? 'TASA INDICATIVA / OBJETIVO' : sol.tipo_tasa}
-                                    </span>
-                                  )}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                {ofertaBadge(oferta.estado)}
+                                <span className="font-semibold text-sm">
+                                  {(oferta as any).banco?.nombre || 'Banco'}
                                 </span>
-                              )}
-                            </div>
-                            <div className="flex gap-4 mt-1 text-sm text-[var(--muted)]">
-                              <span>Cierre: {new Date(sol.fecha_cierre).toLocaleDateString('es-GT')}</span>
-                              <span>{(sol.ofertas || []).length} oferta(s)</span>
-                            </div>
-                            <div className="text-xs text-[var(--muted)] mt-1">
-                              {new Date(sol.created_at).toLocaleString('es-GT')}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-3">
-                            <Button
-                              variant="small"
-                              className="text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                generarPDFSolicitudColocacion({
-                                  id: sol.id,
-                                  cliente_nombre: user?.nombre,
-                                  cliente_entidad: user?.entidad,
-                                  moneda: sol.moneda,
-                                  monto: sol.monto,
-                                  plazo: sol.plazo,
-                                  tasa_objetivo: sol.tasa_objetivo,
-                                  tipo_tasa: sol.tipo_tasa,
-                                  fecha_cierre: sol.fecha_cierre,
-                                  notas: sol.notas,
-                                  created_at: sol.created_at,
-                                })
-                              }}
-                            >
-                              PDF Sol.
-                            </Button>
-                            <span className="text-[var(--muted)] text-sm">{isExpanded ? '▲' : '▼'}</span>
-                          </div>
-                        </div>
-                        {sol.notas && (
-                          <div className="mt-2 text-sm text-[var(--muted)] italic">"{sol.notas}"</div>
-                        )}
-                        {isExpanded && (
-                          <div className="mt-4 border-t border-white/10 pt-4 space-y-3">
-                            <h4 className="font-semibold text-sm">Ofertas recibidas</h4>
-                            {(sol.ofertas || []).length === 0 ? (
-                              <p className="text-sm text-[var(--muted)]">Sin ofertas.</p>
-                            ) : (
-                              (sol.ofertas || []).map((oferta: OfertaColocacion) => (
-                                <div
-                                  key={oferta.id}
-                                  className={`p-3 rounded-lg border ${
-                                    oferta.estado === 'aceptada'
-                                      ? 'bg-green-900/10 border-green-900/40'
-                                      : oferta.estado === 'rechazada'
-                                      ? 'bg-red-900/10 border-red-900/30 opacity-60'
-                                      : 'bg-white/5 border-white/10'
-                                  }`}
-                                >
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <div className="flex items-center gap-2 mb-1">
-                                        {ofertaBadge(oferta.estado)}
-                                        <span className="font-semibold text-sm">
-                                          {(oferta as any).banco?.nombre || 'Banco'}
-                                        </span>
-                                      </div>
-                                      <div className="flex gap-4 text-sm">
-                                        <span>Tasa: <strong className="text-[var(--good)]">{oferta.tasa}%</strong></span>
-                                        <span>Monto: <strong>{formatMoney(oferta.monto, sol.moneda)}</strong></span>
-                                      </div>
-                                      {oferta.notas && (
-                                        <p className="text-xs text-[var(--muted)] mt-1">"{oferta.notas}"</p>
-                                      )}
-                                      <div className="flex items-center gap-2 mt-1.5">
-                                        <span className="text-xs text-[var(--muted)]">
-                                          {new Date(oferta.created_at).toLocaleString('es-GT')}
-                                        </span>
-                                        <Button
-                                          variant="small"
-                                          className="text-xs py-0.5 px-2"
-                                          onClick={() => generarPDFOfertaColocacion({
-                                            id: oferta.id,
-                                            tasa: oferta.tasa,
-                                            monto: oferta.monto,
-                                            notas: oferta.notas,
-                                            created_at: oferta.created_at,
-                                            banco_nombre: (oferta as any).banco?.nombre,
-                                            banco_entidad: (oferta as any).banco?.entidad || (oferta as any).banco?.nombre,
-                                            cliente_nombre: user?.nombre,
-                                            cliente_entidad: user?.entidad,
-                                            solicitud_plazo: sol.plazo,
-                                            solicitud_moneda: sol.moneda,
-                                          })}
-                                        >
-                                          PDF Oferta
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
+                              </div>
+                              <div className="flex gap-4 text-sm">
+                                <span>Tasa: <strong className="text-[var(--good)]">{oferta.tasa}%</strong></span>
+                                <span>Monto: <strong>{formatMoney(oferta.monto, sol.moneda)}</strong></span>
+                              </div>
+                              {oferta.notas && (
+                                <div className="mt-1.5 px-2 py-1 rounded bg-amber-900/20 border border-amber-700/30 text-xs text-amber-200 font-medium">
+                                  📝 {oferta.notas}
                                 </div>
-                              ))
+                              )}
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className="text-xs text-[var(--muted)]">
+                                  {new Date(oferta.created_at).toLocaleString('es-GT')}
+                                </span>
+                                <Button
+                                  variant="small"
+                                  className="text-xs py-0.5 px-2"
+                                  onClick={() => generarPDFOfertaColocacion({
+                                    id: oferta.id,
+                                    tasa: oferta.tasa,
+                                    monto: oferta.monto,
+                                    notas: oferta.notas,
+                                    created_at: oferta.created_at,
+                                    banco_nombre: (oferta as any).banco?.nombre,
+                                    banco_entidad: (oferta as any).banco?.entidad || (oferta as any).banco?.nombre,
+                                    cliente_nombre: user?.nombre,
+                                    cliente_entidad: user?.entidad,
+                                    solicitud_plazo: sol.plazo,
+                                    solicitud_moneda: sol.moneda,
+                                  })}
+                                >
+                                  PDF Oferta
+                                </Button>
+                              </div>
+                            </div>
+                            {oferta.estado === 'enviada' && abierta && (
+                              <div className="flex gap-2 ml-3">
+                                <Button
+                                  variant="primary"
+                                  className="text-xs py-1 px-3"
+                                  onClick={() => setConfirmAceptar(oferta)}
+                                  disabled={procesando}
+                                >
+                                  Aceptar
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  className="text-xs py-1 px-3"
+                                  onClick={() => setConfirmRechazar(oferta.id)}
+                                  disabled={procesando}
+                                >
+                                  Rechazar
+                                </Button>
+                              </div>
                             )}
                           </div>
-                        )}
-                      </Card>
-                    )
-                  })}
-                </div>
-              </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </Card>
             )
-          })()}
-        </>
+          })}
+        </div>
       )}
 
       {/* Modales de confirmación */}

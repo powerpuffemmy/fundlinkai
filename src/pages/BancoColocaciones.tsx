@@ -56,7 +56,7 @@ const ofertaBadge = (estado: string) => {
   )
 }
 
-export const BancoColocaciones: React.FC = () => {
+export const BancoColocaciones: React.FC<{ historial?: boolean }> = ({ historial = false }) => {
   const { user } = useAuthStore()
   const { solicitudes, loading, enviarOferta } = useSolicitudesColocacion()
 
@@ -65,8 +65,7 @@ export const BancoColocaciones: React.FC = () => {
   const [enviando, setEnviando] = useState<string | null>(null)
   // Contraofertar: qué solicitud tiene el form de contraoferta abierto
   const [contraofertando, setContraofertando] = useState<string | null>(null)
-  // Histórico colapsado/expandido
-  const [historicoVisible, setHistoricoVisible] = useState(false)
+
 
   const esAuditor = user?.role === 'banco_auditor'
 
@@ -175,8 +174,9 @@ export const BancoColocaciones: React.FC = () => {
                 </span>
               )}
             </div>
-            <div className="flex gap-4 mt-1 text-sm text-[var(--muted)] flex-wrap">
+            <div className="flex gap-4 mt-1 text-sm text-white/60 flex-wrap">
               <span>Cliente: <strong className="text-white">{sol.cliente?.nombre} ({sol.cliente?.entidad})</strong></span>
+              <span>Recepción: <strong className="text-white/80">{new Date(sol.created_at).toLocaleDateString('es-GT')}</strong></span>
               <span>Cierre: {new Date(sol.fecha_cierre).toLocaleDateString('es-GT')}</span>
             </div>
 
@@ -208,8 +208,8 @@ export const BancoColocaciones: React.FC = () => {
         </div>
 
         {sol.notas && (
-          <div className="mt-2 text-sm text-[var(--muted)] italic">
-            Nota del cliente: "{sol.notas}"
+          <div className="mt-2 px-3 py-2 rounded-md bg-amber-900/20 border border-amber-700/40 text-sm text-amber-200 font-medium">
+            📝 Nota del cliente: {sol.notas}
           </div>
         )}
 
@@ -238,7 +238,7 @@ export const BancoColocaciones: React.FC = () => {
                       <div className="flex gap-4 flex-wrap">
                         <span>Tasa: <strong className="text-[var(--good)]">{oferta.tasa}%</strong></span>
                         <span>Monto: <strong>{formatMoney(oferta.monto, sol.moneda)}</strong></span>
-                        {oferta.notas && <span className="text-[var(--muted)] italic">"{oferta.notas}"</span>}
+                        {oferta.notas && <span className="text-white/75 italic">"{oferta.notas}"</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {ofertaBadge(oferta.estado)}
@@ -374,58 +374,41 @@ export const BancoColocaciones: React.FC = () => {
     )
   }
 
+  const listaVisible = historial ? historicas : activas
+  const tituloVacio = historial
+    ? 'Sin historial de colocaciones'
+    : 'No hay solicitudes de colocación activas'
+  const subtituloVacio = historial
+    ? 'Las solicitudes cerradas, canceladas y vencidas aparecerán aquí.'
+    : 'Los clientes te enviarán solicitudes de colocación aquí.'
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Solicitudes de Colocación</h2>
+        <h2 className="text-2xl font-bold">
+          {historial ? 'Historial de Colocaciones' : 'Solicitudes de Colocación'}
+        </h2>
         <p className="text-[var(--muted)] mt-1">
-          {esAuditor
+          {historial
+            ? 'Solicitudes cerradas, canceladas y vencidas'
+            : esAuditor
             ? 'Consulta las solicitudes de colocación recibidas'
             : 'Responde con tasa cierre a las solicitudes de tus clientes'}
         </p>
       </div>
 
-      {/* ── Activas ── */}
-      {activas.length === 0 && historicas.length === 0 ? (
+      {listaVisible.length === 0 ? (
         <Card>
           <div className="text-center py-12 text-[var(--muted)]">
             <div className="text-4xl mb-3">📭</div>
-            <p className="font-semibold">Sin solicitudes disponibles</p>
-            <p className="text-sm mt-1">Los clientes te enviarán solicitudes de colocación aquí.</p>
+            <p className="font-semibold">{tituloVacio}</p>
+            <p className="text-sm mt-1">{subtituloVacio}</p>
           </div>
         </Card>
       ) : (
-        <>
-          {activas.length === 0 ? (
-            <Card>
-              <p className="text-center text-[var(--muted)] py-6 text-sm">No hay solicitudes activas.</p>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {activas.map(sol => renderSolicitud(sol, false))}
-            </div>
-          )}
-
-          {/* ── Histórico ── */}
-          {historicas.length > 0 && (
-            <div className="mt-6">
-              <button
-                onClick={() => setHistoricoVisible(v => !v)}
-                className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-white transition-colors mb-3"
-              >
-                <span className="text-base">{historicoVisible ? '▼' : '▶'}</span>
-                <span className="font-semibold">Histórico ({historicas.length})</span>
-                <span className="text-xs">— solicitudes cerradas, canceladas y vencidas</span>
-              </button>
-
-              {historicoVisible && (
-                <div className="space-y-4">
-                  {historicas.map(sol => renderSolicitud(sol, true))}
-                </div>
-              )}
-            </div>
-          )}
-        </>
+        <div className="space-y-4">
+          {listaVisible.map(sol => renderSolicitud(sol, historial))}
+        </div>
       )}
     </div>
   )

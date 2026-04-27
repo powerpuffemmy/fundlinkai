@@ -41,6 +41,7 @@ interface BucketItem {
     moneda: Moneda
     tasa: number
     fecha_vencimiento: string
+    fecha_ejecucion?: string | null
     contraparte: string
     es_externo?: boolean
   }[]
@@ -127,6 +128,7 @@ export const ClienteVencimientos: React.FC = () => {
           moneda: c.moneda,
           tasa: c.tasa,
           fecha_vencimiento: c.fecha_vencimiento,
+          fecha_ejecucion: (c as any).fecha_ejecucion ?? null,
           contraparte: getNombreContraparte(c),
           es_externo: c.es_externo
         }))
@@ -160,6 +162,7 @@ export const ClienteVencimientos: React.FC = () => {
           moneda: c.moneda,
           tasa: c.tasa,
           fecha_vencimiento: c.fecha_vencimiento,
+          fecha_ejecucion: (c as any).fecha_ejecucion ?? null,
           contraparte: getNombreContraparte(c),
           es_externo: c.es_externo
         }))
@@ -591,6 +594,11 @@ export const ClienteVencimientos: React.FC = () => {
                                     </span>
                                   )}
                                   <span className="text-[var(--muted)]">{comp.op_id}</span>
+                                  {comp.fecha_ejecucion && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/20 text-green-300 border border-green-900/30">
+                                      Ejec. {formatDate(comp.fecha_ejecucion)}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span className="font-semibold">

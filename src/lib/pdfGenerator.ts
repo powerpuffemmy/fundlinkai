@@ -286,7 +286,7 @@ export const generarPDFEjecutado = async (compromiso: CompromisoConDetalles) => 
     <tr><td><strong>Moneda</strong></td><td>${compromiso.moneda}</td></tr>
     <tr><td><strong>Tasa Pactada</strong></td><td class="highlight-green">${compromiso.tasa}%</td></tr>
     <tr><td><strong>Plazo</strong></td><td>${compromiso.plazo} días</td></tr>
-    <tr><td><strong>Inicio</strong></td><td>${new Date(compromiso.fecha_inicio).toLocaleDateString('es-GT')}</td></tr>
+    <tr><td><strong>Inicio (Ejecución)</strong></td><td style="color:#065f46;font-weight:bold">${compromiso.fecha_ejecucion ? new Date(compromiso.fecha_ejecucion).toLocaleDateString('es-GT') : new Date(compromiso.fecha_inicio).toLocaleDateString('es-GT')}</td></tr>
     <tr><td><strong>Vencimiento</strong></td><td>${new Date(compromiso.fecha_vencimiento).toLocaleDateString('es-GT')}</td></tr>
     <tr><td><strong>Intereses al Vencimiento</strong></td><td style="color:#10b981;font-weight:bold">${fmt(intereses)}</td></tr>
     <tr><td><strong>Total al Vencimiento</strong></td><td style="font-weight:bold;font-size:16px">${fmt(compromiso.monto + intereses)}</td></tr>
