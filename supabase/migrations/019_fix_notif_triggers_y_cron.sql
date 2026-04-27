@@ -81,20 +81,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Reemplaza <SUPABASE_URL> y <ANON_KEY> con los valores reales antes de ejecutar
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Crear job (reemplazar los placeholders)
+-- Crear job — usar $cmd$ en lugar de $$ (el SQL Editor de Supabase rompe con $$)
 -- NOTA: Habilitar pg_cron primero desde Dashboard → Database → Extensions
--- Luego ejecutar este bloque por separado:
 -- SELECT cron.schedule(
 --   'fundlink-alertas-vencimiento',
 --   '0 14 * * *',
---   $$
+--   $cmd$
 --   SELECT net.http_post(
 --     url     := 'https://ewcvkvnnixrxmiruzmie.supabase.co/functions/v1/alertas-vencimiento',
 --     headers := '{"Authorization":"Bearer <ANON_KEY>","apikey":"<ANON_KEY>","Content-Type":"application/json"}'::jsonb,
 --     body    := '{}'::jsonb
 --   )
---   $$
+--   $cmd$
 -- );
-
--- ── 4. Configurar anon_key (ejecutar por separado con tu key real):
--- ALTER DATABASE postgres SET app.settings.supabase_anon_key = '<ANON_KEY>';
